@@ -25,6 +25,8 @@ function GopherServerClient() {
 						leaveRoom: "lr",
 						createRoom: "r",
 						deleteRoom: "rd",
+						roomInvite: "i",
+						revokeInvite: "ri",
 						chatMessage: "c"
 						};
 	this.messageTypes = {
@@ -48,6 +50,8 @@ function GopherServerClient() {
 				left: "onleaveroom",
 				roomCreate: "oncreateroom",
 				roomDelete: "ondeleteroom",
+				invited: "oninvite",
+				inviteRevoked: "onrevokeinvite",
 				chatMessage: "onchatmessage",
 				privateMessage: "onprivatemessage",
 				serverMessage: "onservermessage",
@@ -61,6 +65,8 @@ function GopherServerClient() {
 	this.onLeaveRoomListener = null;
 	this.onCreateRoomListener = null;
 	this.onDeleteRoomListener = null;
+	this.onInviteListener = null;
+	this.onRevokeListener = null;
 	this.onChatMsgListener = null;
 	this.onPrivateMsgListener = null;
 	this.onServerMsgListener = null;
@@ -135,6 +141,8 @@ GopherServerClient.prototype.sD = function(e){
 	self.onLeaveRoomListener = null;
 	self.onCreateRoomListener = null;
 	self.onDeleteRoomListener = null;
+	self.onInviteListener = null;
+	self.onRevokeListener = null;
 	self.onChatMsgListener = null;
 	this.onPrivateMsgListener = null;
 	self.onServerMsgListener = null;
@@ -185,6 +193,12 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 		case this.events.roomDelete:
 			this.onDeleteRoomListener = callback;
 
+		case this.events.invited:
+			this.onInviteListener = callback;
+
+		case this.events.inviteRevoked:
+			this.onRevokeListener = callback;
+
 		case this.events.chatMessage:
 			this.onChatMsgListener = callback;
 
@@ -227,6 +241,12 @@ GopherServerClient.prototype.removeEventListener = function(type){
 
 		case this.events.roomDelete:
 			this.onDeleteRoomListener = null;
+
+		case this.events.invited:
+			this.onInviteListener = null;
+
+		case this.events.inviteRevoked:
+			this.onRevokeListener = null;
 
 		case this.events.chatMessage:
 			this.onChatMsgListener = null;
@@ -271,6 +291,12 @@ GopherServerClient.prototype.sRhandle = function(data){
 
 			case this.clientActionDefs.createRoom:
 				this.createRoomResponse(data.c);
+
+			case this.clientActionDefs.roomInvite:
+				this.sendInviteResponse(data.c);
+
+			case this.clientActionDefs.revokeInvite:
+				this.revokeInviteResponse(data.c);
 
 			case this.clientActionDefs.deleteRoom:
 				this.deleteRoomResponse(data.c);
@@ -399,10 +425,11 @@ GopherServerClient.prototype.leaveRoomResponse = function(data){
 			this.onLeaveRoomListener(false, data.e);
 		}
 	}else{
+		var tempRoom = this.roomName;
 		this.roomName = "";
 		//
 		if(this.onLeaveRoomListener != null){
-			this.onLeaveRoomListener(true, null);
+			this.onLeaveRoomListener(tempRoom, null);
 		}
 	}
 }
@@ -452,6 +479,48 @@ GopherServerClient.prototype.deleteRoomResponse = function(data){
 	}
 }
 
+// INVITE TO ROOM //////////////////////////////////////////////////
+
+GopherServerClient.prototype.sendInvite = function(userName){
+	if(userName.constructor != String){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.roomInvite, P: userName}));
+}
+
+GopherServerClient.prototype.sendInviteResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onInviteListener != null){
+			this.onInviteListener(false, data.e);
+		}
+	}else{
+		if(this.onInviteListener != null){
+			this.onInviteListener(true, null);
+		}
+	}
+}
+
+// REVOKE INVITE TO ROOM //////////////////////////////////////////////////
+
+GopherServerClient.prototype.revokeInvite = function(userName){
+	if(userName.constructor != String){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.revokeInvite, P: userName}));
+}
+
+GopherServerClient.prototype.revokeInviteResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onRevokeListener != null){
+			this.onRevokeListener(false, data.e);
+		}
+	}else{
+		if(this.onRevokeListener != null){
+			this.onRevokeListener(true, null);
+		}
+	}
+}
+
 // CHAT MESSAGE //////////////////////////////////////////////////
 
 GopherServerClient.prototype.chatMessage = function(message){
@@ -465,25 +534,33 @@ GopherServerClient.prototype.chatMessage = function(message){
 //   OBJECT GETTERS   ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-GopherServerClient.prototype.getRoom = function(){
-	return roomName;
+GopherServerClient.prototype.isConnected = function(){
+	return this.connected;
+}
+
+GopherServerClient.prototype.isLoggedIn = function(){
+	return this.loggedIn;
+}
+
+GopherServerClient.prototype.isGuest = function(){
+	return this.guest;
 }
 
 GopherServerClient.prototype.getUserName = function(){
-	return userName;
+	return this.userName;
 }
 
-GopherServerClient.prototype.isGuest = function(){
-	return guest;
+GopherServerClient.prototype.getRoom = function(){
+	return this.roomName;
 }
 
-GopherServerClient.prototype.isGuest = function(){
-	return guest;
+GopherServerClient.prototype.getStatus = function(){
+	if(this.loggedIn){
+		return this.statusList[status];
+	}else{
+		return this.statusList[3];
+	}
 }
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-//   OBJECT SETTERS   ////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*
 "Can you feel that, huh?? Can you feel it Mr.Compost??"
