@@ -6,8 +6,6 @@ function GopherServerClient() {
 	this.port = 0;
 	this.socketURL = "";
 	this.ssl = false;
-	this.onConnect = null;
-	this.onDisconnect = null;
 	this.socket = null;
 
 	//
@@ -22,6 +20,8 @@ function GopherServerClient() {
 						logout: "lo",
 						joinRoom: "j",
 						leaveRoom: "lr",
+						createRoom: "r",
+						deleteRoom: "rd",
 						chatMessage: "c"
 						};
 	this.messageTypes = {
@@ -43,6 +43,7 @@ function GopherServerClient() {
 				disconnected: "ondisconnect",
 				joined: "onjoinroom",
 				left: "onleaveroom",
+				roomCreate: "oncreateroom",
 				chat: "onchatmessage",
 				server: "onservermessage",
 				data: "ondatamessage"
@@ -53,6 +54,7 @@ function GopherServerClient() {
 	this.onDisconnectListener = null;
 	this.onJoinRoomListener = null;
 	this.onLeaveRoomListener = null;
+	this.onCreateRoomListener = null;
 	this.onChatMsgListener = null;
 	this.onServerMsgListener = null;
 	this.onDataMsgListener = null;
@@ -61,9 +63,8 @@ function GopherServerClient() {
 	this.paramError = "An incorrect parameter type was supplied"
 }
 
-GopherServerClient.prototype.connect = function(ip, port, ssl, onConnect, onDisconnect){
-	if(ip.constructor != String || port.constructor != Number || ssl.constructor != Boolean
-			|| onConnect.constructor != Function || onDisconnect.constructor != Function){
+GopherServerClient.prototype.connect = function(ip, port, ssl){
+	if(ip.constructor != String || port.constructor != Number || ssl.constructor != Boolean){
 		return paramError;
 	}
 
@@ -71,15 +72,11 @@ GopherServerClient.prototype.connect = function(ip, port, ssl, onConnect, onDisc
 	this.ip = ip;
 	this.port = port;
 	this.ssl = ssl;
-	if(ssl === true){
+	if(ssl == true){
 		this.socketURL = "wss://"+ip+":"+port+"/wss";
 	}else{
 		this.socketURL = "ws://"+ip+":"+port+"/ws";
 	}
-
-	//SET CALLBACKS
-	this.onConnect = onConnect;
-	this.onDisconnect = onDisconnect;
 
 	//START WEBSOCKET
 	this.socket = new WebSocket(this.socketURL);
@@ -100,7 +97,12 @@ GopherServerClient.prototype.sO = function(e){
 	var self = gopherClient;
 
 	//
-	self.onConnect();
+	self.connected = true;
+
+	//
+	if(self.onConnectListener != null){
+		self.onConnectListener();
+	}
 }
 
 GopherServerClient.prototype.sD = function(e){
@@ -118,7 +120,9 @@ GopherServerClient.prototype.sD = function(e){
 	self.roomName = "";
 
 	//
-	self.onDisconnect();
+	if(self.onDisconnectListener != null){
+		self.onDisconnectListener();
+	}
 }
 
 GopherServerClient.prototype.sR = function(e){
@@ -131,18 +135,9 @@ GopherServerClient.prototype.sR = function(e){
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 GopherServerClient.prototype.addEventListener = function(type, callback){
-	if(type.constructor !== String || callback == null || callback === undefined || callback.constructor !== Function){
+	if(type.constructor != String || callback == null || callback === undefined || callback.constructor != Function){
 		return paramError;
 	}
-	/*login: "onlogin",
-	logout: "onlogout",
-	connected: "onconnect",
-	disconnected: "ondisconnect",
-	joined: "onjoinroom",
-	left: "onleaveroom",
-	chat: "onchatmessage",
-	server: "onservermessage",
-	data: "ondatamessage"*/
 	switch(type){
 		case this.events.login:
 			this.onLoginListener = callback;
@@ -162,6 +157,9 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 		case this.events.left:
 			this.onLeaveRoomListener = callback;
 
+		case this.events.roomCreate:
+			this.onCreateRoomListener = callback;
+
 		case this.events.chat:
 			this.onChatMsgListener = callback;
 
@@ -173,32 +171,76 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 	}
 }
 
+GopherServerClient.prototype.removeEventListener = function(type){
+	if(type.constructor != String){
+		return paramError;
+	}
+	switch(type){
+		case this.events.login:
+			this.onLoginListener = null;
+
+		case this.events.logout:
+			this.onLogoutListener = null;
+
+		case this.events.connected:
+			this.onConnectListener = null;
+
+		case this.events.disconnected:
+			this.onDisconnectListener = null;
+
+		case this.events.joined:
+			this.onJoinRoomListener = null;
+
+		case this.events.left:
+			this.onLeaveRoomListener = null;
+
+		case this.events.roomCreate:
+			this.onCreateRoomListener = null;
+
+		case this.events.chat:
+			this.onChatMsgListener = null;
+
+		case this.events.server:
+			this.onServerMsgListener = null;
+
+		case this.events.data:
+			this.onDataMsgListener = null;
+	}
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //   SOCKET MESSAGE HANDLER   ////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 GopherServerClient.prototype.sRhandle = function(data){
 	if(data.v !== undefined){
-		//Voice stream (high priority)
+		//Voice stream (highest look-up priority)
 	}else if(data.d !== undefined){
-		//RECIEVED DATA (high priority)
-	}else if(data.cr !== undefined){
+		//RECIEVED DATA (high look-up priority)
+	}else if(data.c !== undefined){
 		//CLIENT ACTION RESPONSE
-		switch(data.cr){
+		switch(data.c){
 			case this.clientActionDefs.login:
-				this.loginReponse(data.cr);
+				this.loginReponse(data.c);
 
 			case this.clientActionDefs.logout:
-				this.logoutReponse(data.cr);
+				this.logoutReponse(data.c);
 
 			case this.clientActionDefs.joinRoom:
-				this.joinRoomResponse(data.cr);
+				this.joinRoomResponse(data.c);
 
 			case this.clientActionDefs.leaveRoom:
-				this.leaveRoomResponse(data.cr);
+				this.leaveRoomResponse(data.c);
+
+			case this.clientActionDefs.createRoom:
+				this.createRoomResponse(data.c);
 		}
-	}else if(data.mt !== undefined){
-		//REVIEVED MESSAGE
+	}else if(data.m !== undefined){
+		//REVIEVED ROOM MESSAGE
+	}else if(data.p !== undefined){
+		//REVIEVED PRIVATE MESSAGE
+	}else if(data.i !== undefined){
+		//REVIEVED ROOM INVITE
 	}
 }
 
@@ -209,7 +251,7 @@ GopherServerClient.prototype.sRhandle = function(data){
 // LOG IN //////////////////////////////////////////////////
 
 GopherServerClient.prototype.login = function(userName, isGuest){
-	if(userName.constructor !== String || isGuest.constructor !== Boolean){
+	if(userName.constructor != String || isGuest.constructor != Boolean){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, g: isGuest}}));
@@ -255,7 +297,7 @@ GopherServerClient.prototype.logoutReponse = function(data){
 // JOIN ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.joinRoom = function(roomName){
-	if(roomName.constructor !== String){
+	if(roomName.constructor != String){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.joinRoom, P: roomName}));
@@ -295,18 +337,37 @@ GopherServerClient.prototype.leaveRoomResponse = function(data){
 	}
 }
 
+// CREATE A ROOM //////////////////////////////////////////////////
+
+GopherServerClient.prototype.createRoom = function(roomName, roomType, isPrivate, maxUsers){
+	if(roomName.constructor != String || roomType.constructor != String || isPrivate.constructor != Boolean || maxUsers.constructor != Number){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.createRoom, P: {n: roomName, t: roomType, p: isPrivate, m: Math.round(maxUsers)}}));
+}
+
+GopherServerClient.prototype.createRoomResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onCreateRoomListener != null){
+			this.onCreateRoomListener("", data.e);
+		}
+	}else{
+		this.roomName = data.r;
+		//
+		if(this.onCreateRoomListener != null){
+			this.onCreateRoomListener(data.r, null);
+		}
+	}
+}
+
 // CHAT MESSAGE //////////////////////////////////////////////////
 
 GopherServerClient.prototype.chatMessage = function(message){
-	if(message.constructor !== String && message.constructor !== Object && message.constructor !== Array){
+	if(message.constructor != String && message.constructor != Object && message.constructor != Array){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.chatMessage, P: message}));
 }
-
-// SET USER VAR //////////////////////////////////////////////////
-
-
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //   OBJECT GETTERS   ////////////////////////////////////////////////////////////////////////////////
