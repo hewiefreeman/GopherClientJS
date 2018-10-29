@@ -11,10 +11,13 @@ function GopherServerClient() {
 	//
 	this.connected = false;
 	this.loggedIn = false;
+	this.guest = false;
 	this.userName = "";
 	this.roomName = "";
+	this.status = 0;
 
 	//DEFINITIONS
+	this.statusList = ["Available", "In Game", "Idle", "Offline"];
 	this.clientActionDefs = {
 						login: "li",
 						logout: "lo",
@@ -44,9 +47,11 @@ function GopherServerClient() {
 				joined: "onjoinroom",
 				left: "onleaveroom",
 				roomCreate: "oncreateroom",
-				chat: "onchatmessage",
-				server: "onservermessage",
-				data: "ondatamessage"
+				roomDelete: "ondeleteroom",
+				chatMessage: "onchatmessage",
+				privateMessage: "onprivatemessage",
+				serverMessage: "onservermessage",
+				data: "ondata"
 				};
 	this.onLoginListener = null;
 	this.onLogoutListener = null;
@@ -55,9 +60,11 @@ function GopherServerClient() {
 	this.onJoinRoomListener = null;
 	this.onLeaveRoomListener = null;
 	this.onCreateRoomListener = null;
+	this.onDeleteRoomListener = null;
 	this.onChatMsgListener = null;
+	this.onPrivateMsgListener = null;
 	this.onServerMsgListener = null;
-	this.onDataMsgListener = null;
+	this.onDataListener = null;
 
 	//ERROR MESSAGES
 	this.paramError = "An incorrect parameter type was supplied"
@@ -113,15 +120,30 @@ GopherServerClient.prototype.sD = function(e){
 	self.socket.removeEventListener("close", self.sD);
 	self.socket.removeEventListener("message", self.sR);
 
-	//
+	//RESET VARIABLES
 	self.connected = false;
 	self.loggedIn = false;
+	self.guest = false;
 	self.userName = "";
 	self.roomName = "";
 
-	//
+	//DESTROY LISTENERS
+	self.onLoginListener = null;
+	self.onLogoutListener = null;
+	self.onConnectListener = null;
+	self.onJoinRoomListener = null;
+	self.onLeaveRoomListener = null;
+	self.onCreateRoomListener = null;
+	self.onDeleteRoomListener = null;
+	self.onChatMsgListener = null;
+	this.onPrivateMsgListener = null;
+	self.onServerMsgListener = null;
+	self.onDataListener = null;
+
+	//CALL THE DISCONNECT LISTENER BEFORE DESTROYING
 	if(self.onDisconnectListener != null){
 		self.onDisconnectListener();
+		self.onDisconnectListener = null;
 	}
 }
 
@@ -160,14 +182,20 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 		case this.events.roomCreate:
 			this.onCreateRoomListener = callback;
 
-		case this.events.chat:
+		case this.events.roomDelete:
+			this.onDeleteRoomListener = callback;
+
+		case this.events.chatMessage:
 			this.onChatMsgListener = callback;
 
-		case this.events.server:
+		case this.events.privateMessage:
+			this.onPrivateMsgListener = callback;
+
+		case this.events.serverMessage:
 			this.onServerMsgListener = callback;
 
 		case this.events.data:
-			this.onDataMsgListener = callback;
+			this.onDataListener = callback;
 	}
 }
 
@@ -197,14 +225,20 @@ GopherServerClient.prototype.removeEventListener = function(type){
 		case this.events.roomCreate:
 			this.onCreateRoomListener = null;
 
-		case this.events.chat:
+		case this.events.roomDelete:
+			this.onDeleteRoomListener = null;
+
+		case this.events.chatMessage:
 			this.onChatMsgListener = null;
 
-		case this.events.server:
+		case this.events.privateMessage:
+			this.onPrivateMsgListener = null;
+
+		case this.events.serverMessage:
 			this.onServerMsgListener = null;
 
 		case this.events.data:
-			this.onDataMsgListener = null;
+			this.onDataListener = null;
 	}
 }
 
@@ -214,9 +248,12 @@ GopherServerClient.prototype.removeEventListener = function(type){
 
 GopherServerClient.prototype.sRhandle = function(data){
 	if(data.v !== undefined){
-		//Voice stream (highest look-up priority)
+		//VOICE STREAM (highest look-up priority)
 	}else if(data.d !== undefined){
 		//RECIEVED DATA (high look-up priority)
+		if(this.onDataListener != null){
+			this.onDataListener(data.d);
+		}
 	}else if(data.c !== undefined){
 		//CLIENT ACTION RESPONSE
 		switch(data.c){
@@ -234,13 +271,43 @@ GopherServerClient.prototype.sRhandle = function(data){
 
 			case this.clientActionDefs.createRoom:
 				this.createRoomResponse(data.c);
+
+			case this.clientActionDefs.deleteRoom:
+				this.deleteRoomResponse(data.c);
 		}
 	}else if(data.m !== undefined){
-		//REVIEVED ROOM MESSAGE
+		//RECIEVED MESSAGE
+		if(data.m.s !== undefined){
+			//TYPE SERVER
+			if(this.onServerMsgListener != null){
+				this.onServerMsgListener(data.m.s, data.m.m) // sub-type, message
+			}
+		}else{
+			//TYPE CHAT
+			if(this.onChatMsgListener != null){
+				this.onChatMsgListener(data.m.a, data.m.m); // author, message
+			}
+		}
 	}else if(data.p !== undefined){
-		//REVIEVED PRIVATE MESSAGE
-	}else if(data.i !== undefined){
-		//REVIEVED ROOM INVITE
+		//RECIEVED PRIVATE MESSAGE
+		if(this.onPrivateMsgListener != null){
+			this.onPrivateMsgListener(data.p.a, data.p.m); // author, message
+		}
+	}else if(data.l !== undefined){
+		//UNEXPECTED ROOM LEAVE
+		var tempRoom = this.roomName;
+		this.roomName = "";
+		if(this.onLeaveRoomListener != null){
+			this.onLeaveRoomListener(tempRoom, null);
+		}
+	}else if(data.k !== undefined){
+		//UNEXPECTED LOG OUT
+		this.userName = "";
+		this.loggedIn = false;
+		this.roomName = "";
+		if(this.onLogoutListener != null){
+			this.onLogoutListener(true, null);
+		}
 	}
 }
 
@@ -255,10 +322,12 @@ GopherServerClient.prototype.login = function(userName, isGuest){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, g: isGuest}}));
+	this.guest = isGuest;
 }
 
 GopherServerClient.prototype.loginReponse = function(data){
 	if(data.e !== undefined){
+		this.guest = false;
 		if(this.onLoginListener != null){
 			this.onLoginListener("", data.e);
 		}
@@ -286,6 +355,7 @@ GopherServerClient.prototype.logoutReponse = function(data){
 	}else{
 		this.userName = "";
 		this.loggedIn = false;
+		this.guest = false;
 		this.roomName = "";
 		//
 		if(this.onLogoutListener != null){
@@ -352,10 +422,32 @@ GopherServerClient.prototype.createRoomResponse = function(data){
 			this.onCreateRoomListener("", data.e);
 		}
 	}else{
+		//THE ROOM YOU MADE. MAKING A ROOM AUTO-JOINS THE CLIENT INTO IT.
 		this.roomName = data.r;
 		//
 		if(this.onCreateRoomListener != null){
 			this.onCreateRoomListener(data.r, null);
+		}
+	}
+}
+
+// DELETE A ROOM //////////////////////////////////////////////////
+
+GopherServerClient.prototype.deleteRoom = function(roomName){
+	if(roomName.constructor != String){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.deleteRoom, P: roomName}));
+}
+
+GopherServerClient.prototype.deleteRoomResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onDeleteRoomListener != null){
+			this.onDeleteRoomListener(false, data.e);
+		}
+	}else{
+		if(this.onDeleteRoomListener != null){
+			this.onDeleteRoomListener(true, null);
 		}
 	}
 }
@@ -373,6 +465,27 @@ GopherServerClient.prototype.chatMessage = function(message){
 //   OBJECT GETTERS   ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+GopherServerClient.prototype.getRoom = function(){
+	return roomName;
+}
+
+GopherServerClient.prototype.getUserName = function(){
+	return userName;
+}
+
+GopherServerClient.prototype.isGuest = function(){
+	return guest;
+}
+
+GopherServerClient.prototype.isGuest = function(){
+	return guest;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //   OBJECT SETTERS   ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+"Can you feel that, huh?? Can you feel it Mr.Compost??"
+   -Jim Carrey (Ace Ventura: When Nature Calls)
+*/
