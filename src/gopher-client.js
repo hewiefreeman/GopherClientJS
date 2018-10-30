@@ -27,7 +27,8 @@ function GopherServerClient() {
 						deleteRoom: "rd",
 						roomInvite: "i",
 						revokeInvite: "ri",
-						chatMessage: "c"
+						chatMessage: "c",
+						customAction: "a"
 						};
 	this.messageTypes = {
 					CHAT: 0,
@@ -48,6 +49,8 @@ function GopherServerClient() {
 				disconnected: "ondisconnect",
 				joined: "onjoinroom",
 				left: "onleaveroom",
+				userJoined: "onuserjoin",
+				userLeft: "onuserleft",
 				roomCreate: "oncreateroom",
 				roomDelete: "ondeleteroom",
 				invited: "oninvite",
@@ -55,7 +58,8 @@ function GopherServerClient() {
 				chatMessage: "onchatmessage",
 				privateMessage: "onprivatemessage",
 				serverMessage: "onservermessage",
-				data: "ondata"
+				data: "ondata",
+				customAction: "oncustomaction"
 				};
 	this.onLoginListener = null;
 	this.onLogoutListener = null;
@@ -63,6 +67,8 @@ function GopherServerClient() {
 	this.onDisconnectListener = null;
 	this.onJoinRoomListener = null;
 	this.onLeaveRoomListener = null;
+	this.onUserJoinListener = null;
+	this.onUserLeaveListener = null;
 	this.onCreateRoomListener = null;
 	this.onDeleteRoomListener = null;
 	this.onInviteListener = null;
@@ -71,6 +77,7 @@ function GopherServerClient() {
 	this.onPrivateMsgListener = null;
 	this.onServerMsgListener = null;
 	this.onDataListener = null;
+	this.onCustomActionListener = null;
 
 	//ERROR MESSAGES
 	this.paramError = "An incorrect parameter type was supplied"
@@ -139,6 +146,8 @@ GopherServerClient.prototype.sD = function(e){
 	self.onConnectListener = null;
 	self.onJoinRoomListener = null;
 	self.onLeaveRoomListener = null;
+	self.onUserJoinListener = null;
+	self.onUserLeaveListener = null;
 	self.onCreateRoomListener = null;
 	self.onDeleteRoomListener = null;
 	self.onInviteListener = null;
@@ -147,6 +156,7 @@ GopherServerClient.prototype.sD = function(e){
 	this.onPrivateMsgListener = null;
 	self.onServerMsgListener = null;
 	self.onDataListener = null;
+	self.onCustomActionListener = null;
 
 	//CALL THE DISCONNECT LISTENER BEFORE DESTROYING
 	if(self.onDisconnectListener != null){
@@ -187,6 +197,12 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 		case this.events.left:
 			this.onLeaveRoomListener = callback;
 
+		case this.events.userJoined:
+			this.onUserJoinListener = callback;
+
+		case this.events.userLeft:
+			this.onUserLeaveListener = callback;
+
 		case this.events.roomCreate:
 			this.onCreateRoomListener = callback;
 
@@ -210,6 +226,9 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 
 		case this.events.data:
 			this.onDataListener = callback;
+
+		case this.events.customAction:
+			this.onCustomActionListener = callback;
 	}
 }
 
@@ -236,6 +255,12 @@ GopherServerClient.prototype.removeEventListener = function(type){
 		case this.events.left:
 			this.onLeaveRoomListener = null;
 
+		case this.events.userJoined:
+			this.onUserJoinListener = null;
+
+		case this.events.userLeft:
+			this.onUserLeaveListener = null;
+
 		case this.events.roomCreate:
 			this.onCreateRoomListener = null;
 
@@ -259,6 +284,9 @@ GopherServerClient.prototype.removeEventListener = function(type){
 
 		case this.events.data:
 			this.onDataListener = null;
+
+		case this.events.customAction:
+			this.onCustomActionListener = null;
 	}
 }
 
@@ -275,8 +303,8 @@ GopherServerClient.prototype.sRhandle = function(data){
 			this.onDataListener(data.d);
 		}
 	}else if(data.c !== undefined){
-		//CLIENT ACTION RESPONSE
-		switch(data.c){
+		//BUILT-IN CLIENT ACTION RESPONSE
+		switch(data.c.a){
 			case this.clientActionDefs.login:
 				this.loginReponse(data.c);
 
@@ -300,6 +328,19 @@ GopherServerClient.prototype.sRhandle = function(data){
 
 			case this.clientActionDefs.deleteRoom:
 				this.deleteRoomResponse(data.c);
+		}
+	}else if(data.a !== undefined){
+		//CUSTOM CLIENT ACTION RESPONSE
+		this.customClientActionResponse(data.a);
+	}else if(data.e !== undefined){
+		//USER ENTERED ROOM
+		if(this.onUserJoinListener != null){
+			this.onUserJoinListener(data.e.u, data.e.g); // userName, isGuest
+		}
+	}else if(data.x !== undefined){
+		//USER EXITED ROOM
+		if(this.onUserLeaveListener != null){
+			this.onUserLeaveListener(data.x.u); // userName, isGuest
 		}
 	}else if(data.m !== undefined){
 		//RECIEVED MESSAGE
@@ -528,6 +569,28 @@ GopherServerClient.prototype.chatMessage = function(message){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.chatMessage, P: message}));
+}
+
+// CUSTOM CLIENT ACTION //////////////////////////////////////////////////
+
+GopherServerClient.prototype.customClientAction = function(action, data){
+	if(action.constructor != String || (data.constructor != null && data.constructor != Boolean && data.constructor != Number
+			&& data.constructor != String && data.constructor != Array && data.constructor != Object)){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.customAction, P: {a: action, d: data}}));
+}
+
+GopherServerClient.prototype.customClientActionResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onCustomActionListener != null){
+			this.onCustomActionListener(null, null, data.e); // responseData, actionType, error
+		}
+	}else{
+		if(this.onCustomActionListener != null){
+			this.onCustomActionListener(data.r, data.a, null); // responseData, actionType, error
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
