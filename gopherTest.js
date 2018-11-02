@@ -10,7 +10,7 @@ function loaded(e){
 	gc.addEventListener(gc.events.disconnected, disconnected);
 	gc.addEventListener(gc.events.joined, joined);
 	//CONNECT
-	gc.connect("159.65.100.96", 8080, true);
+	gc.connect("meta-gaming.com", 8080, true);
 }
 
 function closeMic(){

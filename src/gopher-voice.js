@@ -1,12 +1,11 @@
 function GopherVoiceChat(){
-	var self = this;
 	//Defaults
 	this.volume = 1; // Voice chat output volume: 0-1
 	this.bSize = 300; // buffer size in milliseconds
 	this.vcPing = 300; // buffer size in milliseconds
 
-	//PING GETTERS
-	this.pO = 0;
+	//PING TIMER
+	this.pT = 0;
 
 	//INIT OBJECTS FOR MediaStream
 	this.acO = null; // AudioContext out
@@ -15,7 +14,11 @@ function GopherVoiceChat(){
 	this.mRa = [null, null]; // MediaRecorder array
 	this.mRs = 0; // MediaRecorder switcher
 	this.mS = null; // MediaStream/LocalMediaStream
-	this.mO = false;
+	this.mO = false; // Mis is open
+	this.vidEl = null; // Hidded <video> for Blob duration
+
+	//MUTE LIST
+	this.mList = {};
 
 	//DEFINITIONS
 	this.BUFFER_SIZE_SMALL = 150; // EXPOSE IN DOCS
@@ -45,7 +48,13 @@ GopherVoiceChat.prototype.setBufferSize = function(bufferSize){ // EXPOSE IN DOC
 }
 
 GopherVoiceChat.prototype.startVoiceChannels = function(){ // FOR CHROME AUTO-PLAY. MAKE A BUTTON OR USER INTERACTION TO CALL THIS FUNCTION.
-	this.acO = new AudioContext();			// EXPOSE IN DOCS
+	this.acO = new AudioContext();					// EXPOSE IN DOCS
+	//FOR BLOB DURATION:
+	this.vidEl = document.createElement('video');
+}
+
+GopherVoiceChat.prototype.muteUser = function(userName){ // EXPOSE IN DOCS
+	this.mList[userName] = 1;
 }
 
 GopherVoiceChat.prototype.openMic = function(){ // EXPOSE IN DOCS
@@ -102,13 +111,15 @@ GopherVoiceChat.prototype.cMS = function(audioStream){
 	this.mRa[this.mRs] = new MediaRecorder(audioStream, {mimeType: 'audio/webm;codecs=opus'});
 	this.mRa[this.mRs].start();
 	this.mRa[this.mRs].ondataavailable = function(e) {
+		if(e.data.size <= 50){
+			return; // DON'T BOTHER PROCESSING ANYTHING <= 50 BYTES
+		}
 		//CONVERT BLOB INTO STRING FOR JSON
 		var dataURLConvert = new FileReader();
 		dataURLConvert.onloadend = () => {
-			//console.log(dataURLConvert.result.length);
 			//SEND AUDIO STRING TO SERVER
 			gopherClient.socket.send(JSON.stringify({A:gopherClient.clientActionDefs.voiceStream,P:dataURLConvert.result}));
-			self.pO = performance.now();
+			self.pT = performance.now(); // SET PING TIMER
 		}
 		dataURLConvert.readAsDataURL(e.data);
 	};
@@ -119,20 +130,25 @@ GopherVoiceChat.prototype.cMS = function(audioStream){
 GopherVoiceChat.prototype.cMSr = function(){
 	var self = gopherClient.voiceChat;
 	if(self.mRa[self.mRs] != null && self.mS.active){
+		//SWITCH NUMBER OF MAIN MediaRecorder
 		if(self.mRs == 1){
 			self.mRs = 0;
 		}else{
 			self.mRs = 1;
 		}
+		//MAKE NEW MediaRecorder MAIN IF MIC IS STILL OPEN
 		if(self.mO){
 			self.cMS(self.mS);
 		}
+		//ADD PING TIME TO MediaRecorder FROM BEFORE
 		setTimeout(self.cMSrob, self.vcPing);
 	}
 }
 
+//MediaSteam loop over-buffer
 GopherVoiceChat.prototype.cMSrob = function(){
 	var self = gopherClient.voiceChat;
+	//STOP MediaRecorder NOT CURRENTLY MAIN
 	if(self.mRs == 1){
 		if(self.mRa[0] != null && self.mS.active){
 			self.mRa[0].stop();
@@ -151,10 +167,13 @@ GopherVoiceChat.prototype.cMSrob = function(){
 GopherVoiceChat.prototype.rD = function(data){
 	var self = gopherClient.voiceChat;
 	userName = data.u;
+	if(this.mList[userName] != undefined){
+		return;
+	}
 	//PROCESSING Blob audio
 	blobFromText = new Blob([convertDataURIToBinary(data.d)], {type: 'audio/webm;codecs=opus'});
-	if(blobFromText.size == 0){
-		return;
+	if(blobFromText.size <= 50){
+		return; // DON'T BOTHER PROCESSING ANYTHING <= 50 BYTES
 	}
 	this.getBlobDuration(blobFromText).then(function(duration){
 		//
@@ -182,49 +201,47 @@ GopherVoiceChat.prototype.rD = function(data){
 	});
 }
 
-//GET PING
+//GOT VOICE CHAT PING FROM SERVER
 GopherVoiceChat.prototype.pD = function(){
-	var ping = (performance.now()-this.pO)*100;
+	var ping = (performance.now()-this.pT)*100;
 	this.vcPing = (this.vcPing+ping)/2;
 	//console.log("Ping is now: "+this.vcPing);
 }
 
+////////// GISTS
+
 // FROM: https://gist.github.com/borismus/1032746
 var BASE64_MARKER = ';base64,';
-
 function convertDataURIToBinary(dataURI) {
-  var base64Index = dataURI.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
-  var base64 = dataURI.substring(base64Index);
-  var raw = window.atob(base64);
-  var rawLength = raw.length;
-  var array = new Uint8Array(new ArrayBuffer(rawLength));
-
-  for(i = 0; i < rawLength; i++) {
-    array[i] = raw.charCodeAt(i);
-  }
-  return array;
+	var base64Index = dataURI.indexOf(BASE64_MARKER) + BASE64_MARKER.length;
+	var base64 = dataURI.substring(base64Index);
+	var raw = window.atob(base64);
+	var rawLength = raw.length;
+	var array = new Uint8Array(new ArrayBuffer(rawLength));
+	for(i = 0; i < rawLength; i++) {
+		array[i] = raw.charCodeAt(i);
+	}
+	return array;
 }
 
 // FROM: https://github.com/evictor/get-blob-duration/blob/master/src/getBlobDuration.js
+// MODIFIED FOR Gopher Client
 GopherVoiceChat.prototype.getBlobDuration = function(blob){
-	var tempVideoEl = document.createElement('video');
-
+	var self = this;
 	var durationP = new Promise(resolve =>
-	tempVideoEl.addEventListener('loadedmetadata', () => {
+	this.vidEl.addEventListener('loadedmetadata', () => {
 		// Chrome bug: https://bugs.chromium.org/p/chromium/issues/detail?id=642012
-		if(tempVideoEl.duration === Infinity) {
-			tempVideoEl.currentTime = Number.MAX_SAFE_INTEGER;
-			tempVideoEl.ontimeupdate = () => {
-				tempVideoEl.ontimeupdate = null;
-				resolve(tempVideoEl.duration);
-				tempVideoEl.currentTime = 0;
+		if(self.vidEl.duration === Infinity) {
+			self.vidEl.currentTime = Number.MAX_SAFE_INTEGER;
+			self.vidEl.ontimeupdate = () => {
+				self.vidEl.ontimeupdate = null;
+				resolve(self.vidEl.duration);
+				self.vidEl.currentTime = 0;
 			}
 		}else
-			resolve(tempVideoEl.duration)
+			resolve(self.vidEl.duration)
 		})
 	);
-
-	tempVideoEl.src = window.URL.createObjectURL(blob);
-
+	this.vidEl.src = window.URL.createObjectURL(blob);
 	return durationP;
 }
