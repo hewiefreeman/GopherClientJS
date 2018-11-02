@@ -10,7 +10,7 @@ function loaded(e){
 	gc.addEventListener(gc.events.disconnected, disconnected);
 	gc.addEventListener(gc.events.joined, joined);
 	//CONNECT
-	gc.connect("localhost", 8080, false);
+	gc.connect("159.65.100.96", 8080, true);
 }
 
 function closeMic(){
