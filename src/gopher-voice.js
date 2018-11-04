@@ -48,8 +48,8 @@ GopherVoiceChat.prototype.setBufferSize = function(bufferSize){ // EXPOSE IN DOC
 }
 
 GopherVoiceChat.prototype.startVoiceChannels = function(){ // FOR CHROME AUTO-PLAY. MAKE A BUTTON OR USER INTERACTION TO CALL THIS FUNCTION.
-	this.acO = new AudioContext();					// EXPOSE IN DOCS
-	//FOR BLOB DURATION:
+	this.acO = new AudioContext();					// MUST AT LEAST CALL BEFORE VOICE CHAT CAN WORK.
+	//FOR BLOB DURATION								// EXPOSE IN DOCS
 	this.vidEl = document.createElement('video');
 }
 

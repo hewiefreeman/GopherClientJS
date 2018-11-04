@@ -336,7 +336,7 @@ GopherServerClient.prototype.sRhandle = function(data){
 			this.onDataListener(data.d);
 		}
 	}else if(data.c !== undefined){
-		//BUILT-IN CLIENT ACTION RESPONSE
+		//BUILT-IN CLIENT ACTION RESPONSES
 		if(data.c.a == this.clientActionDefs.login){
 			this.loginReponse(data.c);
 		}else if(data.c.a == this.clientActionDefs.logout){
@@ -368,7 +368,7 @@ GopherServerClient.prototype.sRhandle = function(data){
 			this.onUserLeaveListener(data.x.u); // userName
 		}
 	}else if(data.m !== undefined){
-		//RECIEVED MESSAGE
+		//RECIEVED ROOM MESSAGE
 		if(data.m.s !== undefined){
 			//TYPE SERVER
 			if(this.onServerMsgListener != null){
@@ -389,21 +389,6 @@ GopherServerClient.prototype.sRhandle = function(data){
 		//RECIEVED INVITATION TO ROOM
 		if(this.onRecieveInviteListener != null){
 			this.onRecieveInviteListener(data.i.u, data.i.r); // userName, roomName
-		}
-	}else if(data.l !== undefined){
-		//UNEXPECTED ROOM LEAVE
-		var tempRoom = this.roomName;
-		this.roomName = "";
-		if(this.onLeaveRoomListener != null){
-			this.onLeaveRoomListener(tempRoom, null); // roomName, null
-		}
-	}else if(data.k !== undefined){
-		//UNEXPECTED LOG OUT
-		this.userName = "";
-		this.loggedIn = false;
-		this.roomName = "";
-		if(this.onLogoutListener != null){
-			this.onLogoutListener(true, null); // true, null
 		}
 	}
 }
