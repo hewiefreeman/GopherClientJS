@@ -31,6 +31,7 @@ function GopherServerClient() {
 	this.userName = "";
 	this.roomName = "";
 	this.status = 0;
+	this.friends = [];
 
 	//DEFINITIONS
 	this.statusList = ["Available", "In Game", "Idle", "Offline"];
@@ -49,7 +50,11 @@ function GopherServerClient() {
 						revokeInvite: "ri",
 						chatMessage: "c",
 						voiceStream: "v",
-						customAction: "a"
+						customAction: "a",
+						friendRequest: "f",
+						acceptFriend: "fa",
+						declineFriend: "fd",
+						removeFriend: "fr"
 						};
 	this.messageTypes = {
 					CHAT: 0,
@@ -85,7 +90,13 @@ function GopherServerClient() {
 				privateMessage: "onprivatemessage",
 				serverMessage: "onservermessage",
 				data: "ondata",
-				customAction: "oncustomaction"
+				customAction: "oncustomaction",
+				friendRequested: "onfriendrequested", // WHEN YOU REQUEST A FRIEND
+				friendAccepted: "onfriendaccepted", // WHEN YOU ACCEPT A REQUEST
+				friendDeclined: "onfrienddecline", // WHEN YOU DECLINE A REQUEST
+				friendRemoved: "onfriendremove", // WHEN A FRIEND GETS REMOVED OR WHEN A USER DECLINES YOUR REQUEST
+				friendRequestRecieved: "onfriendrequestrecieved", // WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
+				friendRequestAccepted: "onfriendrequestaccpted", // WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
 				};
 	this.onSignupListener = null;
 	this.onAccountDeleteListener = null;
@@ -438,6 +449,12 @@ GopherServerClient.prototype.sRhandle = function(data){
 		if(this.onRecieveInviteListener != null){
 			this.onRecieveInviteListener(data.i.u, data.i.r); // userName, roomName
 		}
+	}else if(data.f !== undefined){
+		//RECIEVED FRIEND REQUEST
+	}else if(data.fa !== undefined){
+		//FRIEND REQUEST WAS ACCEPTED
+	}else if(data.fr !== undefined){
+		//FRIEND WAS REMOVED
 	}
 }
 
