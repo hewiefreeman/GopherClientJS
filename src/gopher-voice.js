@@ -9,7 +9,6 @@ function GopherVoiceChat(){
 
 	//INIT OBJECTS FOR MediaStream
 	this.acO = null; // AudioContext out
-	this.acI = null; // AudioContext in
 	this.oG = null; // output gain
 	this.mRa = [null, null]; // MediaRecorder array
 	this.mRs = 0; // MediaRecorder switcher
@@ -64,7 +63,6 @@ GopherVoiceChat.prototype.openMic = function(){ // EXPOSE IN DOCS
 		return "[gopherChat.voiceChat] You must be logged in and in a room to open the microphone";
 	}
 	var self = this;
-	this.acI = new AudioContext();
 
 	//GET THE MICROPHONE INPUT STREAM TYPE
 	var media = navigator.mediaDevices.getUserMedia({audio:true})

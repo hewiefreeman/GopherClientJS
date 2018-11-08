@@ -35,6 +35,10 @@ function GopherServerClient() {
 	//DEFINITIONS
 	this.statusList = ["Available", "In Game", "Idle", "Offline"];
 	this.clientActionDefs = {
+						signup: "s",
+						deleteAccount: "d",
+						changePassword: "pc",
+						changeAccountInfo: "ic",
 						login: "li",
 						logout: "lo",
 						joinRoom: "j",
@@ -60,6 +64,10 @@ function GopherServerClient() {
 
 	//GOPHER SERVER EVENTS
 	this.events = {
+				signup: "onsignup",
+				accountDelete: "onaccountdelete",
+				passwordChange: "onpasswordchange",
+				accountInfoChange: "onaccountinfochange",
 				login: "onlogin",
 				logout: "onlogout",
 				connected: "onconnect",
@@ -79,6 +87,10 @@ function GopherServerClient() {
 				data: "ondata",
 				customAction: "oncustomaction"
 				};
+	this.onSignupListener = null;
+	this.onAccountDeleteListener = null;
+	this.onPasswordChangeListener = null;
+	this.onAccountInfoChangeListener = null;
 	this.onLoginListener = null;
 	this.onLogoutListener = null;
 	this.onConnectListener = null;
@@ -163,6 +175,10 @@ GopherServerClient.prototype.sD = function(e){
 	self.roomName = "";
 
 	//DESTROY LISTENERS
+	self.onSignupListener = null;
+	self.onAccountDeleteListener = null;
+	self.onPasswordChangeListener = null;
+	self.onAccountInfoChangeListener = null;
 	self.onLoginListener = null;
 	self.onLogoutListener = null;
 	self.onConnectListener = null;
@@ -176,7 +192,7 @@ GopherServerClient.prototype.sD = function(e){
 	self.onRevokeListener = null;
 	self.onRecieveInviteListener = null;
 	self.onChatMsgListener = null;
-	this.onPrivateMsgListener = null;
+	self.onPrivateMsgListener = null;
 	self.onServerMsgListener = null;
 	self.onDataListener = null;
 	self.onCustomActionListener = null;
@@ -201,7 +217,19 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 	if(type.constructor != String || callback == null || callback === undefined || callback.constructor != Function){
 		return paramError;
 	}
-	if(type == this.events.login){
+	if(type == this.events.signup){
+		this.onSignupListener = callback;
+
+	}else if(type == this.events.passwordChange){
+		this.onPasswordChangeListener = callback;
+
+	}else if(type == this.events.accountInfoChange){
+		this.onAccountInfoChangeListener = callback;
+
+	}else if(type == this.events.deleteAccount){
+		this.onAccountDeleteListener = callback;
+
+	}else if(type == this.events.login){
 		this.onLoginListener = callback;
 
 	}else if(type == this.events.logout){
@@ -262,7 +290,19 @@ GopherServerClient.prototype.removeEventListener = function(type){
 	if(type.constructor != String){
 		return paramError;
 	}
-	if(type == this.events.login){
+	if(type == this.events.signup){
+		this.onSignupListener = null;
+
+	}else if(type == this.events.passwordChange){
+		this.onPasswordChangeListener = null;
+
+	}else if(type == this.events.accountInfoChange){
+		this.onAccountInfoChangeListener = null;
+
+	}else if(type == this.events.deleteAccount){
+		this.onAccountDeleteListener = null;
+
+	}else if(type == this.events.login){
 		this.onLoginListener = null;
 
 	}else if(type == this.events.logout){
@@ -337,7 +377,15 @@ GopherServerClient.prototype.sRhandle = function(data){
 		}
 	}else if(data.c !== undefined){
 		//BUILT-IN CLIENT ACTION RESPONSES
-		if(data.c.a == this.clientActionDefs.login){
+		if(data.c.a == this.clientActionDefs.signup){
+			this.signupResponse(data.c);
+		}else if(data.c.a == this.clientActionDefs.deleteAccount){
+			this.deleteAccountResponse(data.c);
+		}else if(data.c.a == this.clientActionDefs.changeAccountInfo){
+			this.changeAccountInfoResponse(data.c);
+		}else if(data.c.a == this.clientActionDefs.changePassword){
+			this.changePasswordResponse(data.c);
+		}else if(data.c.a == this.clientActionDefs.login){
 			this.loginReponse(data.c);
 		}else if(data.c.a == this.clientActionDefs.logout){
 			this.logoutReponse(data.c);
@@ -397,13 +445,104 @@ GopherServerClient.prototype.sRhandle = function(data){
 //   BUILT-IN CLIENT ACTION FUNCTIONS/HANDLERS   /////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// LOG IN //////////////////////////////////////////////////
+// SIGN UP //////////////////////////////////////////////////
 
-GopherServerClient.prototype.login = function(userName, isGuest){
-	if(userName.constructor != String || isGuest.constructor != Boolean){
+GopherServerClient.prototype.signup = function(userName, password, customCols){
+	if(userName.constructor != String || password.constructor != String || (customCols != null && customCols.constructor != Object)){
 		return paramError;
 	}
-	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, g: isGuest}}));
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.signup, P: {n: userName, p: password, c:customCols}}));
+}
+
+GopherServerClient.prototype.signupResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onSignupListener != null){
+			this.onSignupListener(false, data.e);
+		}
+	}else{
+		if(this.onSignupListener != null){
+			this.onSignupListener(true, null);
+		}
+	}
+}
+
+// DELETE AN ACCOUNT //////////////////////////////////////////////////
+
+GopherServerClient.prototype.deleteAccount = function(userName, password, customCols){
+	if(userName.constructor != String || password.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.deleteAccount, P: {n: userName, p: password, c:customCols}}));
+}
+
+GopherServerClient.prototype.deleteAccountResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onAccountDeleteListener != null){
+			this.onAccountDeleteListener(false, data.e);
+		}
+	}else{
+		if(this.onAccountDeleteListener != null){
+			this.onAccountDeleteListener(true, null);
+		}
+	}
+}
+
+// CHANGE ACCOUNT INFO //////////////////////////////////////////////////
+
+GopherServerClient.prototype.changeAccountInfo = function(password, customCols){
+	if(!this.loggedIn){
+		return "You must be logged in to change your account info";
+	}
+	if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeAccountInfo, P: {p: password, c:customCols}}));
+}
+
+GopherServerClient.prototype.changeAccountInfoResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onAccountInfoChangeListener != null){
+			this.onAccountInfoChangeListener(false, data.e);
+		}
+	}else{
+		if(this.onAccountInfoChangeListener != null){
+			this.onAccountInfoChangeListener(true, null);
+		}
+	}
+}
+
+// CHANGE PASSWORD //////////////////////////////////////////////////
+
+GopherServerClient.prototype.changePassword = function(password, customCols){
+	if(!this.loggedIn){
+		return "You must be logged in to change your password";
+	}
+	if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.changePassword, P: {p: password, c:customCols}}));
+}
+
+GopherServerClient.prototype.changePasswordResponse = function(data){
+	if(data.e !== undefined){
+		if(this.onPasswordChangeListener != null){
+			this.onPasswordChangeListener(false, data.e);
+		}
+	}else{
+		if(this.onPasswordChangeListener != null){
+			this.onPasswordChangeListener(true, null);
+		}
+	}
+}
+
+// LOG IN //////////////////////////////////////////////////
+
+GopherServerClient.prototype.login = function(userName, isGuest, password, customCols){
+	if(userName.constructor != String || isGuest.constructor != Boolean || (password != null && password.constructor != String)
+			|| (customCols != null && customCols.constructor != Object)){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, p: password, g: isGuest, c: customCols}}));
 	this.guest = isGuest;
 }
 
