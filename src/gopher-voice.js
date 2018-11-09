@@ -113,11 +113,11 @@ GopherVoiceChat.prototype.cMS = function(audioStream){
 			return; // DON'T BOTHER PROCESSING ANYTHING <= 50 BYTES
 		}
 		//CONVERT BLOB INTO STRING FOR JSON
+		self.pT = performance.now(); // SET PING TIMER
 		var dataURLConvert = new FileReader();
 		dataURLConvert.onloadend = () => {
 			//SEND AUDIO STRING TO SERVER
 			gopherClient.socket.send(JSON.stringify({A:gopherClient.clientActionDefs.voiceStream,P:dataURLConvert.result}));
-			self.pT = performance.now(); // SET PING TIMER
 		}
 		dataURLConvert.readAsDataURL(e.data);
 	};

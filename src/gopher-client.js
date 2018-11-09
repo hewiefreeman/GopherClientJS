@@ -26,6 +26,7 @@ function GopherServerClient() {
 	//
 	this.connected = false;
 	this.loggedIn = false;
+	this.rememberMe = false;
 	this.guest = false;
 	this.userName = "";
 	this.roomName = "";
@@ -83,6 +84,9 @@ function GopherServerClient() {
 				accountDelete: "onaccountdelete",
 				passwordChange: "onpasswordchange",
 				accountInfoChange: "onaccountinfochange",
+				autologInit: "onautologinit",
+				autologFailed: "onautologfailed",
+				autologNoFile: "onautolognofile",
 				login: "onlogin",
 				logout: "onlogout",
 				connected: "onconnect",
@@ -114,6 +118,9 @@ function GopherServerClient() {
 	this.onAccountDeleteListener = null;
 	this.onPasswordChangeListener = null;
 	this.onAccountInfoChangeListener = null;
+	this.onAutoLogInitListener = null;
+	this.onAutoLogFailListener = null;
+	this.onAutoLogNoFileListener = null;
 	this.onLoginListener = null;
 	this.onLogoutListener = null;
 	this.onConnectListener = null;
@@ -201,6 +208,7 @@ GopherServerClient.prototype.sD = function(e){
 	//RESET VARIABLES
 	self.connected = false;
 	self.loggedIn = false;
+	self.rememberMe = false;
 	self.guest = false;
 	self.userName = "";
 	self.roomName = "";
@@ -316,6 +324,15 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 	}else if(type == this.events.friendStatusChanged){
 		this.onFriendStatusChangeListener = callback;
 
+	}else if(type == this.events.autologInit){
+		this.onAutoLogInitListener = callback;
+
+	}else if(type == this.events.autologFailed){
+		this.onAutoLogFailListener = callback;
+
+	}else if(type == this.events.autologNoFile){
+		this.onAutoLogNoFileListener = callback;
+
 	}
 }
 
@@ -412,6 +429,15 @@ GopherServerClient.prototype.removeEventListener = function(type){
 
 	}else if(type == this.events.friendStatusChanged){
 		this.onFriendStatusChangeListener = null;
+
+	}else if(type == this.events.autologInit){
+		this.onAutoLogInitListener = null;
+
+	}else if(type == this.events.autologFailed){
+		this.onAutoLogFailListener = null;
+
+	}else if(type == this.events.autologNoFile){
+		this.onAutoLogNoFileListener = null;
 
 	}
 }
@@ -540,6 +566,39 @@ GopherServerClient.prototype.sRhandle = function(data){
 		if(this.onFriendStatusChangeListener != null){
 			this.onFriendStatusChangeListener(data.fs.n, data.fs.s); // userName, status
 		}
+	}else if(data.t !== undefined){
+		//SERVER REQUESTED AUTO-LOG INFO
+		if(this.onAutoLogInitListener != null){
+			this.onAutoLogInitListener();
+		}
+		if(localStorage.dt){
+			if(localStorage.da && localStorage.di){
+				this.socket.send(JSON.stringify({A: "2", P: {dt: localStorage.dt, da: localStorage.da, di: localStorage.di}}));
+			}else{
+				this.socket.send(JSON.stringify({A: "1", P: localStorage.dt}));
+			}
+		}else{
+			this.socket.send(JSON.stringify({A: "0", P: null}));
+		}
+	}else if(data.ts !== undefined){
+		//SERVER WANTS TO SET DEVICE TAG
+		localStorage.dt = data.ts;
+		this.socket.send(JSON.stringify({A: "1", P: localStorage.dt}));
+	}else if(data.ap !== undefined){
+		//SERVER WANTS TO SET DEVICE PASS
+		this.socket.send(JSON.stringify({A: "3", P: null}));
+		localStorage.da = data.ap;
+	}else if(data.af !== undefined){                             //// REMEMBER, AUTO-LOGIN TRIGGERS onLoginListener IF SUCCESSFUL.
+		//AUTO-LOGIN FAILED
+		localStorage.dt = data.af.dt;
+		if(this.onAutoLogFailListener != null){
+			this.onAutoLogFailListener(data.af.e);
+		}
+	}else if(data.ai !== undefined){
+		//AUTO-LOGIN NOT FILED
+		if(this.onAutoLogNoFileListener != null){
+			this.onAutoLogNoFileListener();
+		}
 	}
 }
 
@@ -619,14 +678,14 @@ GopherServerClient.prototype.changeAccountInfoResponse = function(data){
 
 // CHANGE PASSWORD //////////////////////////////////////////////////
 
-GopherServerClient.prototype.changePassword = function(password, customCols){
+GopherServerClient.prototype.changePassword = function(password, newPassword, customCols){
 	if(!this.loggedIn){
 		return "You must be logged in to change your password";
 	}
-	if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
+	if(password.constructor != String || newPassword.constructor != String || (customCols != null && customCols.constructor != Object)){
 		return paramError;
 	}
-	this.socket.send(JSON.stringify({A: this.clientActionDefs.changePassword, P: {p: password, c:customCols}}));
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.changePassword, P: {p: password, n: newPassword, c:customCols}}));
 }
 
 GopherServerClient.prototype.changePasswordResponse = function(data){
@@ -647,13 +706,18 @@ GopherServerClient.prototype.changePasswordResponse = function(data){
 
 // LOG IN //////////////////////////////////////////////////
 
-GopherServerClient.prototype.login = function(userName, isGuest, password, customCols){
-	if(userName.constructor != String || isGuest.constructor != Boolean || (password != null && password.constructor != String)
-			|| (customCols != null && customCols.constructor != Object)){
+GopherServerClient.prototype.login = function(userName, isGuest, password, rememberMe, customCols){
+	if(userName.constructor != String || isGuest.constructor != Boolean || (rememberMe != null && rememberMe.constructor != Boolean)
+			|| (password != null && password.constructor != String) || (customCols != null && customCols.constructor != Object)){
 		return paramError;
 	}
-	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, p: password, g: isGuest, c: customCols}}));
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, p: password, g: isGuest, r: rememberMe, c: customCols}}));
 	this.guest = isGuest;
+	if(rememberMe == null){
+		this.rememberMe = false;
+	}else{
+		this.rememberMe = rememberMe;
+	}
 }
 
 GopherServerClient.prototype.loginReponse = function(data){
@@ -675,6 +739,11 @@ GopherServerClient.prototype.loginReponse = function(data){
 				}
 				this.friends[fList[i]["n"]] = {name: fList[i]["n"], requestStatus: fList[i]["rs"], status: status};
 			}
+		}
+		//SET AUTO-LOG IF PROVIDED
+		if(data.r.ap && this.rememberMe){
+			localStorage.da = data.r.ap;
+			localStorage.di = data.r.ai;
 		}
 		//
 		if(this.onLoginListener != null){
