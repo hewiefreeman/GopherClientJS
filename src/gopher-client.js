@@ -4,7 +4,7 @@ function GopherServerClient() {
 	var self = this;
 
 	//INITIAL CHECKS
-	this.browserVoiceSupport = true;
+	this.browserVoiceSupport = false;
 	this.voiceChat = null;
 
 	//CHECK WEBSOCKET SUPPORT
@@ -12,9 +12,8 @@ function GopherServerClient() {
 
 	//CHECK MICROPHONE/SOUND SUPPORT
 	if(navigator.mediaDevices.getUserMedia){
+		this.browserVoiceSupport = true;
 		this.voiceChat = new GopherVoiceChat();
-	}else{
-		this.browserVoiceSupport = false;
 	}
 
 	//INIT OBJECTS
@@ -31,10 +30,9 @@ function GopherServerClient() {
 	this.userName = "";
 	this.roomName = "";
 	this.status = 0;
-	this.friends = [];
+	this.friends = {};
 
 	//DEFINITIONS
-	this.statusList = ["Available", "In Game", "Idle", "Offline"];
 	this.clientActionDefs = {
 						signup: "s",
 						deleteAccount: "d",
@@ -50,8 +48,9 @@ function GopherServerClient() {
 						revokeInvite: "ri",
 						chatMessage: "c",
 						voiceStream: "v",
+						changeStatus: "sc",
 						customAction: "a",
-						friendRequest: "f",
+						requestFriend: "f",
 						acceptFriend: "fa",
 						declineFriend: "fd",
 						removeFriend: "fr"
@@ -65,6 +64,17 @@ function GopherServerClient() {
 						GAME: 0,
 						NOTICE: 1,
 						IMPORTANT: 2
+						};
+	this.userStatusDefs = {
+					available: 0,
+					inGame: 1,
+					idle: 2,
+					offline: 3
+					};
+	this.friendStatusDefs = {
+						requested: 0,
+						pending: 1,
+						accepted: 2
 						};
 
 	//GOPHER SERVER EVENTS
@@ -90,13 +100,15 @@ function GopherServerClient() {
 				privateMessage: "onprivatemessage",
 				serverMessage: "onservermessage",
 				data: "ondata",
+				statusChanged: "onstatuschanged", // WHEN YOU CHANGE YOUR STATUS
 				customAction: "oncustomaction",
 				friendRequested: "onfriendrequested", // WHEN YOU REQUEST A FRIEND
 				friendAccepted: "onfriendaccepted", // WHEN YOU ACCEPT A REQUEST
 				friendDeclined: "onfrienddecline", // WHEN YOU DECLINE A REQUEST
 				friendRemoved: "onfriendremove", // WHEN A FRIEND GETS REMOVED OR WHEN A USER DECLINES YOUR REQUEST
 				friendRequestRecieved: "onfriendrequestrecieved", // WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
-				friendRequestAccepted: "onfriendrequestaccpted", // WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
+				friendRequestAccepted: "onfriendrequestaccepted", // WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
+				friendStatusChanged: "onfriendstatuschanged" // WHEN A FRIEND'S STATUS CHANGES
 				};
 	this.onSignupListener = null;
 	this.onAccountDeleteListener = null;
@@ -119,7 +131,15 @@ function GopherServerClient() {
 	this.onPrivateMsgListener = null;
 	this.onServerMsgListener = null;
 	this.onDataListener = null;
+	this.onStatusChangeListener = null;
 	this.onCustomActionListener = null;
+	this.onRequestFriendListener = null;
+	this.onAcceptFriendListener = null;
+	this.onDeclineFriendListener = null;
+	this.onRemoveFriendListener = null;
+	this.onFriendRequestRecievedListener = null;
+	this.onFriendRequestAcceptedListener = null;
+	this.onFriendStatusChangeListener = null;
 
 	//ERROR MESSAGES
 	this.paramError = "An incorrect parameter type was supplied"
@@ -184,34 +204,12 @@ GopherServerClient.prototype.sD = function(e){
 	self.guest = false;
 	self.userName = "";
 	self.roomName = "";
+	self.status = 0;
+	self.friends = {};
 
-	//DESTROY LISTENERS
-	self.onSignupListener = null;
-	self.onAccountDeleteListener = null;
-	self.onPasswordChangeListener = null;
-	self.onAccountInfoChangeListener = null;
-	self.onLoginListener = null;
-	self.onLogoutListener = null;
-	self.onConnectListener = null;
-	self.onJoinRoomListener = null;
-	self.onLeaveRoomListener = null;
-	self.onUserJoinListener = null;
-	self.onUserLeaveListener = null;
-	self.onCreateRoomListener = null;
-	self.onDeleteRoomListener = null;
-	self.onInviteListener = null;
-	self.onRevokeListener = null;
-	self.onRecieveInviteListener = null;
-	self.onChatMsgListener = null;
-	self.onPrivateMsgListener = null;
-	self.onServerMsgListener = null;
-	self.onDataListener = null;
-	self.onCustomActionListener = null;
-
-	//CALL THE DISCONNECT LISTENER BEFORE DESTROYING
+	//CALL THE DISCONNECT LISTENER
 	if(self.onDisconnectListener != null){
 		self.onDisconnectListener();
-		self.onDisconnectListener = null;
 	}
 }
 
@@ -291,8 +289,32 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 	}else if(type == this.events.data){
 		this.onDataListener = callback;
 
+	}else if(type == this.events.statusChanged){
+		this.onStatusChangeListener = callback;
+
 	}else if(type == this.events.customAction){
 		this.onCustomActionListener = callback;
+
+	}else if(type == this.events.friendRequested){
+		this.onRequestFriendListener = callback;
+
+	}else if(type == this.events.friendAccepted){
+		this.onAcceptFriendListener = callback;
+
+	}else if(type == this.events.friendDeclined){
+		this.onDeclineFriendListener = callback;
+
+	}else if(type == this.events.friendRemoved){
+		this.onRemoveFriendListener = callback;
+
+	}else if(type == this.events.friendRequestRecieved){
+		this.onFriendRequestRecievedListener = callback;
+
+	}else if(type == this.events.friendRequestAccepted){
+		this.onFriendRequestAcceptedListener = callback;
+
+	}else if(type == this.events.friendStatusChanged){
+		this.onFriendStatusChangeListener = callback;
 
 	}
 }
@@ -364,8 +386,32 @@ GopherServerClient.prototype.removeEventListener = function(type){
 	}else if(type == this.events.data){
 		this.onDataListener = null;
 
+	}else if(type == this.events.statusChanged){
+		this.onStatusChangeListener = null;
+
 	}else if(type == this.events.customAction){
 		this.onCustomActionListener = null;
+
+	}else if(type == this.events.friendRequested){
+		this.onRequestFriendListener = null;
+
+	}else if(type == this.events.friendAccepted){
+		this.onAcceptFriendListener = null;
+
+	}else if(type == this.events.friendDeclined){
+		this.onDeclineFriendListener = null;
+
+	}else if(type == this.events.friendRemoved){
+		this.onRemoveFriendListener = null;
+
+	}else if(type == this.events.friendRequestRecieved){
+		this.onFriendRequestRecievedListener = null;
+
+	}else if(type == this.events.friendRequestAccepted){
+		this.onFriendRequestAcceptedListener = null;
+
+	}else if(type == this.events.friendStatusChanged){
+		this.onFriendStatusChangeListener = null;
 
 	}
 }
@@ -412,6 +458,16 @@ GopherServerClient.prototype.sRhandle = function(data){
 			this.revokeInviteResponse(data.c);
 		}else if(data.c.a == this.clientActionDefs.deleteRoom){
 			this.deleteRoomResponse(data.c);
+		}else if(data.c.a == this.clientActionDefs.requestFriend){
+			this.requestFriendRecieved(data.c);
+		}else if(data.c.a == this.clientActionDefs.acceptFriend){
+			this.acceptFriendRecieved(data.c);
+		}else if(data.c.a == this.clientActionDefs.declineFriend){
+			this.declineFriendRecieved(data.c);
+		}else if(data.c.a == this.clientActionDefs.removeFriend){
+			this.removeFriendRecieved(data.c);
+		}else if(data.c.a == this.clientActionDefs.changeStatus){
+			this.changeStatusRecieved(data.c);
 		}
 	}else if(data.a !== undefined){
 		//CUSTOM CLIENT ACTION RESPONSE
@@ -451,15 +507,48 @@ GopherServerClient.prototype.sRhandle = function(data){
 		}
 	}else if(data.f !== undefined){
 		//RECIEVED FRIEND REQUEST
+		this.friends[data.f.n] = {name: data.f.n, requestStatus: this.friendStatusDefs.requested, status: -1};
+		if(this.onFriendRequestRecievedListener != null){
+			this.onFriendRequestRecievedListener(data.f.n); // userName
+		}
 	}else if(data.fa !== undefined){
 		//FRIEND REQUEST WAS ACCEPTED
+		if(this.friends[data.fa.n] != undefined){
+			this.friends[data.fa.n].requestStatus = this.friendStatusDefs.accepted;
+			this.friends[data.fa.n].status = data.fa.s;
+		}else{
+			this.friends[data.fa.n] = {name: data.fa.n, requestStatus: this.friendStatusDefs.accepted, status: data.fa.s};
+		}
+		if(this.onFriendRequestAcceptedListener != null){
+			this.onFriendRequestAcceptedListener(data.fa.n); // userName
+		}
 	}else if(data.fr !== undefined){
 		//FRIEND WAS REMOVED
+		if(this.friends[data.fr.n] != undefined){
+			delete this.friends[data.fr.n];
+		}
+		if(this.onRemoveFriendListener != null){
+			this.onRemoveFriendListener(data.fr.n); // userName
+		}
+	}else if(data.fs !== undefined){
+		//FRIEND'S STATUS CHANGED
+		if(this.friends[data.fs.n] != undefined){
+			this.friends[data.fs.n].status = data.fs.s;
+		}else{
+			this.friends[data.fs.n] = {name: data.fs.n, requestStatus: this.friendStatusDefs.accepted, status: data.fs.s};
+		}
+		if(this.onFriendStatusChangeListener != null){
+			this.onFriendStatusChangeListener(data.fs.n, data.fs.s); // userName, status
+		}
 	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 //   BUILT-IN CLIENT ACTION FUNCTIONS/HANDLERS   /////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   ACCOUNT ACTIONS   ///////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // SIGN UP //////////////////////////////////////////////////
@@ -552,6 +641,10 @@ GopherServerClient.prototype.changePasswordResponse = function(data){
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   LOGIN/LOGOUT ACTIONS   //////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // LOG IN //////////////////////////////////////////////////
 
 GopherServerClient.prototype.login = function(userName, isGuest, password, customCols){
@@ -570,11 +663,22 @@ GopherServerClient.prototype.loginReponse = function(data){
 			this.onLoginListener("", data.e);
 		}
 	}else{
-		this.userName = data.r;
+		this.userName = data.r.n;
 		this.loggedIn = true;
+		//MAKE FRIENDS
+		var fList = data.r.f;
+		if(fList != undefined && fList != null){
+			for(var i = 0; i < fList.length; i++){
+				var status = -1;
+				if(fList[i]["s"] != undefined){
+					status = fList[i]["s"];
+				}
+				this.friends[fList[i]["n"]] = {name: fList[i]["n"], requestStatus: fList[i]["rs"], status: status};
+			}
+		}
 		//
 		if(this.onLoginListener != null){
-			this.onLoginListener(data.r, null);
+			this.onLoginListener(this.userName, null);
 		}
 	}
 }
@@ -595,12 +699,18 @@ GopherServerClient.prototype.logoutReponse = function(data){
 		this.loggedIn = false;
 		this.guest = false;
 		this.roomName = "";
+		this.status = 0;
+		this.friends = {};
 		//
 		if(this.onLogoutListener != null){
 			this.onLogoutListener(true, null);
 		}
 	}
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   ROOM ACTIONS   //////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // JOIN ROOM //////////////////////////////////////////////////
 
@@ -742,6 +852,10 @@ GopherServerClient.prototype.chatMessage = function(message){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.chatMessage, P: message}));
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   CUSTOM ACTIONS   ////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // CUSTOM CLIENT ACTION //////////////////////////////////////////////////
 
 GopherServerClient.prototype.customClientAction = function(action, data){
@@ -760,6 +874,151 @@ GopherServerClient.prototype.customClientActionResponse = function(data){
 	}else{
 		if(this.onCustomActionListener != null){
 			this.onCustomActionListener(data.r, data.a, null); // responseData, actionType, error
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   FRIENDING ACTIONS   /////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// REQUEST A FRIEND //////////////////////////////////////////////////
+
+GopherServerClient.prototype.requestFriend = function(friendName){
+	if(friendName.constructor != String){
+		return paramError;
+	}else if(this.friends[friendName] != undefined){
+		return "You cannot request '"+friendName+"' as a friend at this time";
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.requestFriend, P: friendName}));
+}
+
+GopherServerClient.prototype.requestFriendRecieved = function(data){
+	if(data.e !== undefined){
+		if(this.onRequestFriendListener != null){
+			this.onRequestFriendListener(null, data.e); // friendName, error
+		}
+	}else{
+		//ADD FRIEND
+		this.friends[data.r] = {name: data.r, requestStatus: this.friendStatusDefs.requested, status: -1};
+		//
+		if(this.onRequestFriendListener != null){
+			this.onRequestFriendListener(data.r, null); // friendName, error
+		}
+	}
+}
+
+// ACCEPT A FRIEND REQUEST //////////////////////////////////////////////////
+
+GopherServerClient.prototype.acceptFriend = function(friendName){
+	if(friendName.constructor != String){
+		return paramError;
+	}else if(this.friends[friendName] == undefined){
+		return "No friend by the name '"+friendName+"'";
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.acceptFriend, P: friendName}));
+}
+
+GopherServerClient.prototype.acceptFriendRecieved = function(data){
+	if(data.e !== undefined){
+		if(this.onAcceptFriendListener != null){
+			this.onAcceptFriendListener(null, data.e); // friendName, error
+		}
+	}else{
+		//UPDATE/ADD FRIEND
+		if(this.friends[data.r.n] != undefined){
+			this.friends[data.r.n].requestStatus = this.friendStatusDefs.accepted;
+			this.friends[data.r.n].status = data.r.s;
+		}else{
+			this.friends[data.r.n] = {name: data.r.n, requestStatus: this.friendStatusDefs.accepted, status: data.r.s};
+		}
+		//
+		if(this.onAcceptFriendListener != null){
+			this.onAcceptFriendListener(data.r.n, null); // friendName, error
+		}
+	}
+}
+
+// DECLINE A FRIEND REQUEST //////////////////////////////////////////////////
+
+GopherServerClient.prototype.declineFriend = function(friendName){
+	if(friendName.constructor != String){
+		return paramError;
+	}else if(this.friends[friendName] == undefined){
+		return "No friend by the name '"+friendName+"'";
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.declineFriend, P: friendName}));
+}
+
+GopherServerClient.prototype.declineFriendRecieved = function(data){
+	if(data.e !== undefined){
+		if(this.onDeclineFriendListener != null){
+			this.onDeclineFriendListener(null, data.e); // friendName, error
+		}
+	}else{
+		//REMOVE FRIEND
+		if(this.friends[data.r] != undefined){
+			delete this.friends[data.r];
+		}
+		//
+		if(this.onDeclineFriendListener != null){
+			this.onDeclineFriendListener(data.r, null); // friendName, error
+		}
+	}
+}
+
+// REMOVE A FRIEND //////////////////////////////////////////////////
+
+GopherServerClient.prototype.removeFriend = function(friendName){
+	if(friendName.constructor != String){
+		return paramError;
+	}else if(this.friends[friendName] == undefined){
+		return "No friend by the name '"+friendName+"'";
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.removeFriend, P: friendName}));
+}
+
+GopherServerClient.prototype.removeFriendRecieved = function(data){
+	if(data.e !== undefined){
+		if(this.onRemoveFriendListener != null){
+			this.onRemoveFriendListener(null, data.e); // friendName, error
+		}
+	}else{
+		//REMOVE FRIEND
+		if(this.friends[data.r] != undefined){
+			delete this.friends[data.r];
+		}
+		//
+		if(this.onRemoveFriendListener != null){
+			this.onRemoveFriendListener(data.r, null); // friendName, error
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   CHANGING STATUS   ///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// CHANGE YOUR STATUS //////////////////////////////////////////////////
+
+GopherServerClient.prototype.changeStatus = function(status){
+	if(status.constructor != Number || status < 0){
+		return paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeStatus, P: Math.round(status)}));
+}
+
+GopherServerClient.prototype.changeStatusRecieved = function(data){
+	if(data.e !== undefined){
+		if(this.onStatusChangeListener != null){
+			this.onStatusChangeListener(null, data.e); // status, error
+		}
+	}else{
+		//CHANGE STATUS
+		this.status = data.r;
+		//
+		if(this.onStatusChangeListener != null){
+			this.onStatusChangeListener(data.r, null); // status, error
 		}
 	}
 }
@@ -788,12 +1047,8 @@ GopherServerClient.prototype.getRoom = function(){
 	return this.roomName;
 }
 
-GopherServerClient.prototype.getStatus = function(){
-	if(this.loggedIn){
-		return this.statusList[status];
-	}else{
-		return this.statusList[3];
-	}
+GopherServerClient.prototype.getFriends = function(){
+	return this.friends;
 }
 
 GopherServerClient.prototype.voiceSupport = function(){
