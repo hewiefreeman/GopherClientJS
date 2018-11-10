@@ -243,7 +243,7 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 	}else if(type == this.events.accountInfoChange){
 		this.onAccountInfoChangeListener = callback;
 
-	}else if(type == this.events.deleteAccount){
+	}else if(type == this.events.accountDelete){
 		this.onAccountDeleteListener = callback;
 
 	}else if(type == this.events.login){
@@ -349,7 +349,7 @@ GopherServerClient.prototype.removeEventListener = function(type){
 	}else if(type == this.events.accountInfoChange){
 		this.onAccountInfoChangeListener = null;
 
-	}else if(type == this.events.deleteAccount){
+	}else if(type == this.events.accountDelete){
 		this.onAccountDeleteListener = null;
 
 	}else if(type == this.events.login){
@@ -657,8 +657,7 @@ GopherServerClient.prototype.deleteAccountResponse = function(data){
 GopherServerClient.prototype.changeAccountInfo = function(password, customCols){
 	if(!this.loggedIn){
 		return "You must be logged in to change your account info";
-	}
-	if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
+	}else if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
 		return paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeAccountInfo, P: {p: password, c:customCols}}));
@@ -706,8 +705,8 @@ GopherServerClient.prototype.changePasswordResponse = function(data){
 
 // LOG IN //////////////////////////////////////////////////
 
-GopherServerClient.prototype.login = function(userName, isGuest, password, rememberMe, customCols){
-	if(userName.constructor != String || isGuest.constructor != Boolean || (rememberMe != null && rememberMe.constructor != Boolean)
+GopherServerClient.prototype.login = function(userName, password, rememberMe, isGuest, customCols){
+	if(userName.constructor != String || (isGuest != null && isGuest.constructor != Boolean) || (rememberMe != null && rememberMe.constructor != Boolean)
 			|| (password != null && password.constructor != String) || (customCols != null && customCols.constructor != Object)){
 		return paramError;
 	}
