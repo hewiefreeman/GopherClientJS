@@ -66,12 +66,12 @@ function GopherServerClient() {
 						NOTICE: 1,
 						IMPORTANT: 2
 						};
-	this.userStatusDefs = {
-					available: 0,
-					inGame: 1,
-					idle: 2,
-					offline: 3
-					};
+	this.userStatusDefs = [
+					"Available",
+					"In Game",
+					"Idle",
+					"Offline"
+					];
 	this.friendStatusDefs = {
 						requested: 0,
 						pending: 1,
@@ -571,26 +571,28 @@ GopherServerClient.prototype.sRhandle = function(data){
 		if(this.onAutoLogInitListener != null){
 			this.onAutoLogInitListener();
 		}
-		if(localStorage.dt){
-			if(localStorage.da && localStorage.di){
-				this.socket.send(JSON.stringify({A: "2", P: {dt: localStorage.dt, da: localStorage.da, di: localStorage.di}}));
+		if(localStorage.getItem('dt')){
+			if(localStorage.getItem('da') && localStorage.getItem('di')){
+				this.socket.send(JSON.stringify({A: "2", P: {dt: localStorage.getItem('dt'), da: localStorage.getItem('da'),
+													di: localStorage.getItem('di')}}));
 			}else{
-				this.socket.send(JSON.stringify({A: "1", P: localStorage.dt}));
+				this.socket.send(JSON.stringify({A: "1", P: localStorage.getItem('dt')}));
 			}
 		}else{
 			this.socket.send(JSON.stringify({A: "0", P: null}));
 		}
 	}else if(data.ts !== undefined){
 		//SERVER WANTS TO SET DEVICE TAG
-		localStorage.dt = data.ts;
-		this.socket.send(JSON.stringify({A: "1", P: localStorage.dt}));
+		localStorage.setItem('dt', data.ts);
+		this.socket.send(JSON.stringify({A: "1", P: localStorage.getItem('dt')}));
 	}else if(data.ap !== undefined){
 		//SERVER WANTS TO SET DEVICE PASS
 		this.socket.send(JSON.stringify({A: "3", P: null}));
-		localStorage.da = data.ap;
+		localStorage.setItem('da', data.ap);
 	}else if(data.af !== undefined){                             //// REMEMBER, AUTO-LOGIN TRIGGERS onLoginListener IF SUCCESSFUL.
 		//AUTO-LOGIN FAILED
-		localStorage.dt = data.af.dt;
+		localStorage.clear();
+		localStorage.setItem('dt', data.af.dt);
 		if(this.onAutoLogFailListener != null){
 			this.onAutoLogFailListener(data.af.e);
 		}
@@ -741,8 +743,8 @@ GopherServerClient.prototype.loginReponse = function(data){
 		}
 		//SET AUTO-LOG IF PROVIDED
 		if(data.r.ap && this.rememberMe){
-			localStorage.da = data.r.ap;
-			localStorage.di = data.r.ai;
+			localStorage.setItem('da', data.r.ap);
+			localStorage.setItem('di', data.r.ai);
 		}
 		//
 		if(this.onLoginListener != null){
@@ -769,6 +771,11 @@ GopherServerClient.prototype.logoutReponse = function(data){
 		this.roomName = "";
 		this.status = 0;
 		this.friends = {};
+		//UN-SET AUTO-LOG IF SET
+		if(localStorage.getItem('da')){
+			localStorage.removeItem("da");
+			localStorage.removeItem("di");
+		}
 		//
 		if(this.onLogoutListener != null){
 			this.onLogoutListener(true, null);
@@ -968,7 +975,7 @@ GopherServerClient.prototype.requestFriendRecieved = function(data){
 		}
 	}else{
 		//ADD FRIEND
-		this.friends[data.r] = {name: data.r, requestStatus: this.friendStatusDefs.requested, status: -1};
+		this.friends[data.r] = {name: data.r, requestStatus: this.friendStatusDefs.pending, status: -1};
 		//
 		if(this.onRequestFriendListener != null){
 			this.onRequestFriendListener(data.r, null); // friendName, error
@@ -983,6 +990,8 @@ GopherServerClient.prototype.acceptFriend = function(friendName){
 		return paramError;
 	}else if(this.friends[friendName] == undefined){
 		return "No friend by the name '"+friendName+"'";
+	}else if(this.friends[friendName].requestStatus != this.friendStatusDefs.requested){
+		return "Cannot accept '"+friendName+"' as a friend";
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.acceptFriend, P: friendName}));
 }
@@ -1014,6 +1023,8 @@ GopherServerClient.prototype.declineFriend = function(friendName){
 		return paramError;
 	}else if(this.friends[friendName] == undefined){
 		return "No friend by the name '"+friendName+"'";
+	}else if(this.friends[friendName].requestStatus != this.friendStatusDefs.requested){
+		return "Cannot decline '"+friendName+"' as a friend";
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.declineFriend, P: friendName}));
 }
@@ -1117,6 +1128,17 @@ GopherServerClient.prototype.getRoom = function(){
 
 GopherServerClient.prototype.getFriends = function(){
 	return this.friends;
+}
+
+GopherServerClient.prototype.getStatus = function(){
+	return this.status;
+}
+
+GopherServerClient.prototype.statusName = function(status){
+	if(status == undefined || status == null || status.constructor != Number || status < 0 || status > this.userStatusDefs.length-1){
+		return undefined;
+	}
+	return this.userStatusDefs[status];
 }
 
 GopherServerClient.prototype.voiceSupport = function(){
