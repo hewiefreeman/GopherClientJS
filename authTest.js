@@ -33,7 +33,7 @@ function connected(){
 	console.log("connected!");
 
 	//userName, password, customCols
-	gc.signup("Vokome", "l2pdmger", {email: "etrerere@gmail.com"});
+	gc.signup("Cheekspreadr", "l2pdmger", {email: "hewiefreeman@gmail.com"});
 
 	//userName, isGuest, password, rememberMe, customCols
 	//gc.login("dominiquedebergue@gmail.com", "l2pdmger");

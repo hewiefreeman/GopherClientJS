@@ -9,7 +9,7 @@ function loaded(e){
 	gc.addEventListener(gc.events.disconnected, disconnected);
 	//SIGNUP/LOGIN LISTENERS
 	gc.addEventListener(gc.events.login, onLogin);
-	//gc.addEventListener(gc.events.logout, onLogout);
+	gc.addEventListener(gc.events.logout, onLogout);
 	//FRIEND LISTENERS
 	gc.addEventListener(gc.events.friendRequested, onRequestFriend);// WHEN YOU REQUEST A FRIEND
 	gc.addEventListener(gc.events.friendAccepted, onAcceptFriend);// WHEN YOU ACCEPT A REQUEST
@@ -96,6 +96,14 @@ function onLogin(userName, error){
 	}
 }
 
+//////////////////  LOGOUT  //////////////////////////////
+function onLogout(success, error){
+	if(error != null){
+		console.log("Error: "+error);
+	}else{
+		console.log("You have been logged out");
+	}
+}
 
 //////////////////  REQUESTED FRIEND  //////////////////////////////
 function onRequestFriend(friendName, error){
@@ -142,12 +150,12 @@ function onStatusChange(status, error){
 	}
 }
 
-//////////////////  RECIEVED FRIEND REQUEST  //////////////////////////////
+//////////////////  RECEIVED FRIEND REQUEST  //////////////////////////////
 function onRecieveFriendRequest(friendName){
 	console.log("Recieved friend request from: "+friendName);
 }
 
-//////////////////  RECIEVED FRIEND REQUEST ACCEPT  //////////////////////////////
+//////////////////  RECEIVED FRIEND REQUEST ACCEPT  //////////////////////////////
 function onRecieveFriendAccept(friendName){
 	console.log(friendName+" accepted your friend request");
 }

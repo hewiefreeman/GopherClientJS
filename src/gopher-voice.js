@@ -161,7 +161,7 @@ GopherVoiceChat.prototype.cMSrob = function(){
 
 }
 
-// RECIEVED VOICE CHAT DATA FROM SERVER
+// RECEIVED VOICE CHAT DATA FROM SERVER
 GopherVoiceChat.prototype.rD = function(data){
 	var self = gopherClient.voiceChat;
 	userName = data.u;

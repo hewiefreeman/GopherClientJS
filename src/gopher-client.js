@@ -32,51 +32,60 @@ function GopherServerClient() {
 	this.roomName = "";
 	this.status = 0;
 	this.friends = {};
+	this.userVars = {};
 
 	//DEFINITIONS
 	this.clientActionDefs = {
-						signup: "s",
-						deleteAccount: "d",
-						changePassword: "pc",
-						changeAccountInfo: "ic",
-						login: "li",
-						logout: "lo",
-						joinRoom: "j",
-						leaveRoom: "lr",
-						createRoom: "r",
-						deleteRoom: "rd",
-						roomInvite: "i",
-						revokeInvite: "ri",
-						chatMessage: "c",
-						voiceStream: "v",
-						changeStatus: "sc",
-						customAction: "a",
-						requestFriend: "f",
-						acceptFriend: "fa",
-						declineFriend: "fd",
-						removeFriend: "fr"
-						};
+				signup: "s",
+				deleteAccount: "d",
+				changePassword: "pc",
+				changeAccountInfo: "ic",
+				login: "li",
+				logout: "lo",
+				joinRoom: "j",
+				leaveRoom: "lr",
+				createRoom: "r",
+				deleteRoom: "rd",
+				roomInvite: "i",
+				revokeInvite: "ri",
+				chatMessage: "c",
+				privateMessage: "p",
+				voiceStream: "v",
+				changeStatus: "sc",
+				customAction: "a",
+				requestFriend: "f",
+				acceptFriend: "fa",
+				declineFriend: "fd",
+				removeFriend: "fr",
+				setUserVariable: "vs",
+				setUserVariables: "vx"
+	};
 	this.messageTypes = {
-					CHAT: 0,
-					PRIVATE: 1,
-					SERVER: 2
-					};
+				CHAT: 0,
+				PRIVATE: 1,
+				SERVER: 2
+	};
 	this.serverMessageTypes = {
-						GAME: 0,
-						NOTICE: 1,
-						IMPORTANT: 2
-						};
+				GAME: 0,
+				NOTICE: 1,
+				IMPORTANT: 2
+	};
+	this.serverMessageNames = [
+				"Game",
+				"Notice",
+				"Important"
+	];
 	this.userStatusDefs = [
-					"Available",
-					"In Game",
-					"Idle",
-					"Offline"
-					];
+				"Available",
+				"In Game",
+				"Idle",
+				"Offline"
+	];
 	this.friendStatusDefs = {
-						requested: 0,
-						pending: 1,
-						accepted: 2
-						};
+				requested: 0,
+				pending: 1,
+				accepted: 2
+	};
 
 	//GOPHER SERVER EVENTS
 	this.events = {
@@ -99,7 +108,7 @@ function GopherServerClient() {
 				roomDelete: "ondeleteroom",
 				invited: "oninvite",
 				inviteRevoked: "onrevokeinvite",
-				inviteRecieved: "oninviterecieved",
+				inviteReceived: "oninvitereceived",
 				chatMessage: "onchatmessage",
 				privateMessage: "onprivatemessage",
 				serverMessage: "onservermessage",
@@ -110,10 +119,10 @@ function GopherServerClient() {
 				friendAccepted: "onfriendaccepted", // WHEN YOU ACCEPT A REQUEST
 				friendDeclined: "onfrienddecline", // WHEN YOU DECLINE A REQUEST
 				friendRemoved: "onfriendremove", // WHEN A FRIEND GETS REMOVED OR WHEN A USER DECLINES YOUR REQUEST
-				friendRequestRecieved: "onfriendrequestrecieved", // WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
+				friendRequestReceived: "onfriendrequestreceived", // WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
 				friendRequestAccepted: "onfriendrequestaccepted", // WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
 				friendStatusChanged: "onfriendstatuschanged" // WHEN A FRIEND'S STATUS CHANGES
-				};
+	};
 	this.onSignupListener = null;
 	this.onAccountDeleteListener = null;
 	this.onPasswordChangeListener = null;
@@ -157,7 +166,7 @@ function GopherServerClient() {
 
 GopherServerClient.prototype.connect = function(ip, port, ssl){
 	if(ip.constructor != String || port.constructor != Number || ssl.constructor != Boolean){
-		return paramError;
+		return this.paramError;
 	}
 
 	//SET CONFIG
@@ -231,8 +240,8 @@ GopherServerClient.prototype.sR = function(e){
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 GopherServerClient.prototype.addEventListener = function(type, callback){
-	if(type.constructor != String || callback == null || callback === undefined || callback.constructor != Function){
-		return paramError;
+	if(type.constructor == null || type.constructor != String || callback == null || callback === undefined || callback.constructor != Function){
+		return this.paramError;
 	}
 	if(type == this.events.signup){
 		this.onSignupListener = callback;
@@ -338,7 +347,7 @@ GopherServerClient.prototype.addEventListener = function(type, callback){
 
 GopherServerClient.prototype.removeEventListener = function(type){
 	if(type.constructor != String){
-		return paramError;
+		return this.paramError;
 	}
 	if(type == this.events.signup){
 		this.onSignupListener = null;
@@ -454,13 +463,20 @@ GopherServerClient.prototype.sRhandle = function(data){
 		//VOICE PING (high look-up priority)
 		this.voiceChat.pD();
 	}else if(data.d !== undefined){
-		//RECIEVED DATA (high look-up priority)
+		//RECEIVED DATA (high look-up priority)
 		if(this.onDataListener != null){
 			this.onDataListener(data.d);
 		}
+	}else if(data.a !== undefined){
+		//CUSTOM CLIENT ACTION RESPONSE
+		this.customClientActionResponse(data.a);
 	}else if(data.c !== undefined){
 		//BUILT-IN CLIENT ACTION RESPONSES
-		if(data.c.a == this.clientActionDefs.signup){
+		if(data.c.a == this.clientActionDefs.setUserVariable){
+			this.setUserVariableReceived(data.c);
+		}else if(data.c.a == this.clientActionDefs.setUserVariables){
+			this.setUserVariablesReceived(data.c);
+		}else if(data.c.a == this.clientActionDefs.signup){
 			this.signupResponse(data.c);
 		}else if(data.c.a == this.clientActionDefs.deleteAccount){
 			this.deleteAccountResponse(data.c);
@@ -495,9 +511,6 @@ GopherServerClient.prototype.sRhandle = function(data){
 		}else if(data.c.a == this.clientActionDefs.changeStatus){
 			this.changeStatusRecieved(data.c);
 		}
-	}else if(data.a !== undefined){
-		//CUSTOM CLIENT ACTION RESPONSE
-		this.customClientActionResponse(data.a);
 	}else if(data.e !== undefined){
 		//USER ENTERED ROOM
 		if(this.onUserJoinListener != null){
@@ -509,7 +522,7 @@ GopherServerClient.prototype.sRhandle = function(data){
 			this.onUserLeaveListener(data.x.u); // userName
 		}
 	}else if(data.m !== undefined){
-		//RECIEVED ROOM MESSAGE
+		//RECEIVED ROOM MESSAGE
 		if(data.m.s !== undefined){
 			//TYPE SERVER
 			if(this.onServerMsgListener != null){
@@ -522,17 +535,17 @@ GopherServerClient.prototype.sRhandle = function(data){
 			}
 		}
 	}else if(data.p !== undefined){
-		//RECIEVED PRIVATE MESSAGE
+		//RECEIVED PRIVATE MESSAGE
 		if(this.onPrivateMsgListener != null){
-			this.onPrivateMsgListener(data.p.a, data.p.m); // author, message
+			this.onPrivateMsgListener(data.p.f, data.p.t, data.p.m); // from, to, message
 		}
 	}else if(data.i !== undefined){
-		//RECIEVED INVITATION TO ROOM
+		//RECEIVED INVITATION TO ROOM
 		if(this.onRecieveInviteListener != null){
 			this.onRecieveInviteListener(data.i.u, data.i.r); // userName, roomName
 		}
 	}else if(data.f !== undefined){
-		//RECIEVED FRIEND REQUEST
+		//RECEIVED FRIEND REQUEST
 		this.friends[data.f.n] = {name: data.f.n, requestStatus: this.friendStatusDefs.requested, status: -1};
 		if(this.onFriendRequestRecievedListener != null){
 			this.onFriendRequestRecievedListener(data.f.n); // userName
@@ -615,8 +628,9 @@ GopherServerClient.prototype.sRhandle = function(data){
 // SIGN UP //////////////////////////////////////////////////
 
 GopherServerClient.prototype.signup = function(userName, password, customCols){
-	if(userName.constructor != String || password.constructor != String || (customCols != null && customCols.constructor != Object)){
-		return paramError;
+	if(userName == null || password == null || userName.constructor != String ||
+			password.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.signup, P: {n: userName, p: password, c:customCols}}));
 }
@@ -636,8 +650,9 @@ GopherServerClient.prototype.signupResponse = function(data){
 // DELETE AN ACCOUNT //////////////////////////////////////////////////
 
 GopherServerClient.prototype.deleteAccount = function(userName, password, customCols){
-	if(userName.constructor != String || password.constructor != String || (customCols != null && customCols.constructor != Object)){
-		return paramError;
+	if(userName == null || password == null || userName.constructor != String ||
+			password.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.deleteAccount, P: {n: userName, p: password, c:customCols}}));
 }
@@ -659,8 +674,8 @@ GopherServerClient.prototype.deleteAccountResponse = function(data){
 GopherServerClient.prototype.changeAccountInfo = function(password, customCols){
 	if(!this.loggedIn){
 		return "You must be logged in to change your account info";
-	}else if(password.constructor != String || (customCols != null && customCols.constructor != Object)){
-		return paramError;
+	}else if(password == null || password.constructor != String || customCols == null || customCols.constructor != Object){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeAccountInfo, P: {p: password, c:customCols}}));
 }
@@ -683,8 +698,9 @@ GopherServerClient.prototype.changePassword = function(password, newPassword, cu
 	if(!this.loggedIn){
 		return "You must be logged in to change your password";
 	}
-	if(password.constructor != String || newPassword.constructor != String || (customCols != null && customCols.constructor != Object)){
-		return paramError;
+	if(password == null || newPassword == null || password.constructor != String ||
+			newPassword.constructor != String || (customCols != null && customCols.constructor != Object)){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.changePassword, P: {p: password, n: newPassword, c:customCols}}));
 }
@@ -708,9 +724,9 @@ GopherServerClient.prototype.changePasswordResponse = function(data){
 // LOG IN //////////////////////////////////////////////////
 
 GopherServerClient.prototype.login = function(userName, password, rememberMe, isGuest, customCols){
-	if(userName.constructor != String || (isGuest != null && isGuest.constructor != Boolean) || (rememberMe != null && rememberMe.constructor != Boolean)
+	if(userName == null || userName.constructor != String || (isGuest != null && isGuest.constructor != Boolean) || (rememberMe != null && rememberMe.constructor != Boolean)
 			|| (password != null && password.constructor != String) || (customCols != null && customCols.constructor != Object)){
-		return paramError;
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.login, P: {n: userName, p: password, g: isGuest, r: rememberMe, c: customCols}}));
 	this.guest = isGuest;
@@ -790,20 +806,20 @@ GopherServerClient.prototype.logoutReponse = function(data){
 // JOIN ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.joinRoom = function(roomName){
-	if(roomName.constructor != String){
-		return paramError;
+	if(roomName == null || roomName.constructor != String){
+		return this.paramError;
 	}
+	this.roomName = roomName
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.joinRoom, P: roomName}));
 }
 
 GopherServerClient.prototype.joinRoomResponse = function(data){
 	if(data.e !== undefined){
+		this.roomName = ""
 		if(this.onJoinRoomListener != null){
 			this.onJoinRoomListener("", data.e);
 		}
 	}else{
-		this.roomName = data.r;
-		//
 		if(this.onJoinRoomListener != null){
 			this.onJoinRoomListener(data.r, null);
 		}
@@ -834,8 +850,9 @@ GopherServerClient.prototype.leaveRoomResponse = function(data){
 // CREATE A ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.createRoom = function(roomName, roomType, isPrivate, maxUsers){
-	if(roomName.constructor != String || roomType.constructor != String || isPrivate.constructor != Boolean || maxUsers.constructor != Number){
-		return paramError;
+	if(roomName == null || roomType == null || isPrivate == null || maxUsers == null ||
+			roomName.constructor != String || roomType.constructor != String || isPrivate.constructor != Boolean || maxUsers.constructor != Number){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.createRoom, P: {n: roomName, t: roomType, p: isPrivate, m: Math.round(maxUsers)}}));
 }
@@ -858,8 +875,8 @@ GopherServerClient.prototype.createRoomResponse = function(data){
 // DELETE A ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.deleteRoom = function(roomName){
-	if(roomName.constructor != String){
-		return paramError;
+	if(roomName == null || roomName.constructor != String){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.deleteRoom, P: roomName}));
 }
@@ -879,8 +896,8 @@ GopherServerClient.prototype.deleteRoomResponse = function(data){
 // INVITE TO ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.sendInvite = function(userName){
-	if(userName.constructor != String){
-		return paramError;
+	if(userName == null || userName.constructor != String){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.roomInvite, P: userName}));
 }
@@ -900,8 +917,8 @@ GopherServerClient.prototype.sendInviteResponse = function(data){
 // REVOKE INVITE TO ROOM //////////////////////////////////////////////////
 
 GopherServerClient.prototype.revokeInvite = function(userName){
-	if(userName.constructor != String){
-		return paramError;
+	if(userName == null || userName.constructor != String){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.revokeInvite, P: userName}));
 }
@@ -918,13 +935,27 @@ GopherServerClient.prototype.revokeInviteResponse = function(data){
 	}
 }
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   MESSAGING   /////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 // CHAT MESSAGE //////////////////////////////////////////////////
 
 GopherServerClient.prototype.chatMessage = function(message){
-	if(message.constructor != String && message.constructor != Object && message.constructor != Array){
-		return paramError;
+	if(message == null || (message.constructor != String && message.constructor != Object && message.constructor != Array)){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.chatMessage, P: message}));
+}
+
+// PRIVATE MESSAGE //////////////////////////////////////////////////
+
+GopherServerClient.prototype.privateMessage = function(userName, message){
+	if(message == null || userName == null || userName.constructor != String ||
+			(message.constructor != String && message.constructor != Object && message.constructor != Array)){
+		return this.paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.privateMessage, P: {u: userName, m: message}}));
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -936,7 +967,7 @@ GopherServerClient.prototype.chatMessage = function(message){
 GopherServerClient.prototype.customClientAction = function(action, data){
 	if(action.constructor != String || (data.constructor != null && data.constructor != Boolean && data.constructor != Number
 			&& data.constructor != String && data.constructor != Array && data.constructor != Object)){
-		return paramError;
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.customAction, P: {a: action, d: data}}));
 }
@@ -960,8 +991,8 @@ GopherServerClient.prototype.customClientActionResponse = function(data){
 // REQUEST A FRIEND //////////////////////////////////////////////////
 
 GopherServerClient.prototype.requestFriend = function(friendName){
-	if(friendName.constructor != String){
-		return paramError;
+	if(friendName == null || friendName.constructor != String){
+		return this.paramError;
 	}else if(this.friends[friendName] != undefined){
 		return "You cannot request '"+friendName+"' as a friend at this time";
 	}
@@ -986,8 +1017,8 @@ GopherServerClient.prototype.requestFriendRecieved = function(data){
 // ACCEPT A FRIEND REQUEST //////////////////////////////////////////////////
 
 GopherServerClient.prototype.acceptFriend = function(friendName){
-	if(friendName.constructor != String){
-		return paramError;
+	if(friendName == null || friendName.constructor != String){
+		return this.paramError;
 	}else if(this.friends[friendName] == undefined){
 		return "No friend by the name '"+friendName+"'";
 	}else if(this.friends[friendName].requestStatus != this.friendStatusDefs.requested){
@@ -1019,8 +1050,8 @@ GopherServerClient.prototype.acceptFriendRecieved = function(data){
 // DECLINE A FRIEND REQUEST //////////////////////////////////////////////////
 
 GopherServerClient.prototype.declineFriend = function(friendName){
-	if(friendName.constructor != String){
-		return paramError;
+	if(friendName == null || friendName.constructor != String){
+		return this.paramError;
 	}else if(this.friends[friendName] == undefined){
 		return "No friend by the name '"+friendName+"'";
 	}else if(this.friends[friendName].requestStatus != this.friendStatusDefs.requested){
@@ -1049,8 +1080,8 @@ GopherServerClient.prototype.declineFriendRecieved = function(data){
 // REMOVE A FRIEND //////////////////////////////////////////////////
 
 GopherServerClient.prototype.removeFriend = function(friendName){
-	if(friendName.constructor != String){
-		return paramError;
+	if(friendName == null || friendName.constructor != String){
+		return this.paramError;
 	}else if(this.friends[friendName] == undefined){
 		return "No friend by the name '"+friendName+"'";
 	}
@@ -1081,8 +1112,8 @@ GopherServerClient.prototype.removeFriendRecieved = function(data){
 // CHANGE YOUR STATUS //////////////////////////////////////////////////
 
 GopherServerClient.prototype.changeStatus = function(status){
-	if(status.constructor != Number || status < 0){
-		return paramError;
+	if(status == null || status.constructor != Number || status < 0){
+		return this.paramError;
 	}
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeStatus, P: Math.round(status)}));
 }
@@ -1100,6 +1131,46 @@ GopherServerClient.prototype.changeStatusRecieved = function(data){
 			this.onStatusChangeListener(data.r, null); // status, error
 		}
 	}
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+//   USER VARIABLES   ////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// SET USER VARIABLE //////////////////////////////////////////////////
+
+GopherServerClient.prototype.setUserVariable = function(key, value){
+	if(key == undefined || key.constructor != String){
+		return this.paramError;
+	}
+	console.log(key+", "+value);
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.setUserVariable, P: {k:key, v: value}}));
+}
+
+GopherServerClient.prototype.setUserVariableReceived = function(data){
+	this.userVars[data.r.k] = data.r.v;
+}
+
+// SET MULTIPLE USER VARIABLES //////////////////////////////////////////////////
+
+GopherServerClient.prototype.setUserVariables = function(values){
+	if(values == null || values.constructor != Object){
+		return this.paramError;
+	}
+	this.socket.send(JSON.stringify({A: this.clientActionDefs.setUserVariables, P: values}));
+}
+
+GopherServerClient.prototype.setUserVariablesReceived = function(data){
+	var keys = Object.keys(data.r);
+	for(var i = 0; i < keys.length; i++){
+		this.userVars[keys[i]] = data.r[keys[i]];
+	}
+}
+
+// USER VARIABLE GETTER //////////////////////////////////////////////////
+
+GopherServerClient.prototype.getUserVariable = function(key){
+	return this.userVars[key];
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
