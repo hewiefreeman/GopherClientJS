@@ -809,18 +809,18 @@ GopherServerClient.prototype.joinRoom = function(roomName){
 	if(roomName == null || roomName.constructor != String){
 		return this.paramError;
 	}
-	this.roomName = roomName
+	this.roomName = roomName;
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.joinRoom, P: roomName}));
 }
 
 GopherServerClient.prototype.joinRoomResponse = function(data){
 	if(data.e !== undefined){
-		this.roomName = ""
+		this.roomName = "";
 		if(this.onJoinRoomListener != null){
 			this.onJoinRoomListener("", data.e);
 		}
 	}else{
-		if(this.onJoinRoomListener != null){
+		if(this.onJoinRoomListener != null && this.onJoinRoomListener != null){
 			this.onJoinRoomListener(data.r, null);
 		}
 	}

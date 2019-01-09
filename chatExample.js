@@ -16,6 +16,7 @@ function loaded(e){
 	//CHAT LISTENERS
 	gc.addEventListener(gc.events.chatMessage, onChat)
 	gc.addEventListener(gc.events.privateMessage, onPM)
+	gc.addEventListener(gc.events.serverMessage, onServerMessage)
 	//CONNECT
 	gc.connect("localhost", 8080, false);
 }
@@ -27,7 +28,9 @@ function connected(){
 	document.getElementById("loginBtn").onclick = function(){
 		var login = document.getElementById("loginText").value;
 		var pass = document.getElementById("passText").value;
-		gc.login(login, pass, false, document.getElementById("guestCheck").checked);
+		var rememberMe = document.getElementById("rememberCheck").checked;
+		var guest = document.getElementById("guestCheck").checked;
+		gc.login(login, pass, rememberMe, guest);
 	};
 }
 
@@ -38,7 +41,7 @@ function disconnected(){
 //////////////////  LOGIN  //////////////////////////////
 function onLogin(userName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error: [ID - "+error.id+"], [Message - '"+error.m+"']");
 	}else{
 		console.log("Logged in as: "+userName);
 		//ENTER TEST ROOM
@@ -49,7 +52,7 @@ function onLogin(userName, error){
 //////////////////  LOGOUT  //////////////////////////////
 function onLogout(success, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error: [ID - "+error.id+"], [Message - '"+error.m+"']");
 	}else{
 		console.log("You have been logged out");
 	}
@@ -58,7 +61,7 @@ function onLogout(success, error){
 //////////////////  JOINED ROOM  //////////////////////////////
 function joinedRoom(success, error){
 	if(error != null){
-		console.log("Error: "+error.id);
+		console.log("Error: [ID - "+error.id+"], [Message - '"+error.m+"']");
 	}else{
 		console.log("Joined room!");
 
