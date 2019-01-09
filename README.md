@@ -18,6 +18,7 @@ The JavaScript Client API for the [Gopher Game Server](https://github.com/hewief
    - Manipulating Rooms
    - User Variables
    - Messaging
+   - Executing Custom Client Actions
 3) **SQL Authentication**
    - Set-Up
    - Using Custom Account Info
