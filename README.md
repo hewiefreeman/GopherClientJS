@@ -10,9 +10,9 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
 
 ## Table of Contents
 
-1) **Getting Started**
-   - Set-Up
-   - Connecting to the server
+1) [**Getting Started**](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started)
+   - [Set-Up](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started#set-up)
+   - [Connecting to the Server](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started#connecting-to-the-server)
 2) **Client Actions**
    - Login & Logout
    - Manipulating Rooms
