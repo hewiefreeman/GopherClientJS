@@ -31,6 +31,8 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
 # Contributions
 Contributions are open and welcomed! Help is needed for everything from documentation, cleaning up code, performance enhancements, client APIs (in any laguage) and more. Don't forget to show your support by starring or following the project!
 
+If you want to make a client API in an unsupported language and want to know where to start and/or have any questions, feel free to [email me](mailto:dominiquedebergue@gmail.com?subject=[GitHub]%20Gopher%20Game%20Server)!
+
 Please read the following articles before submitting any contributions or filing an Issue:
 
  - [Contribution Guidlines](https://github.com/hewiefreeman/GopherGameServer/blob/master/CONTRIBUTING.md)
