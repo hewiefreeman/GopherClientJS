@@ -23,10 +23,10 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
    - [Creating accounts](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#creating-accounts)
    - [Deleting Accounts](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#deleting-accounts)
    - [Login](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#login)
-   - Changing Passwords
-   - Changing Custom Account Info
-   - Auto-Login (Remember Me)
-   - Friending
+   - [Changing Passwords](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#changing-passwords)
+   - [Changing Custom Account Info](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#changing-custom-account-info)
+   - [Auto-Login (Remember Me)](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#auto-login-remember-me)
+   - [Friending](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#friending)
 
 # Contributions
 Contributions are open and welcomed! Help is needed for everything from documentation, cleaning up code, performance enhancements, client APIs (in any laguage) and more. Don't forget to show your support by starring or following the project!
