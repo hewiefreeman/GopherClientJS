@@ -13,12 +13,12 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
 1) [**Getting Started**](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started)
    - [Set-Up](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started#set-up)
    - [Connecting to the Server](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started#connecting-to-the-server)
-2) **Client Actions**
-   - Login & Logout
-   - Manipulating Rooms
-   - User Variables
-   - Messaging
-   - Executing Custom Client Actions
+2) [**Client Actions**](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions)
+   - [Login & Logout](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions#login--logout)
+   - [Rooms](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions#rooms)
+   - [User Variables](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions#user-variables)
+   - [Messaging](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions#messaging)
+   - [Executing Custom Client Actions](https://github.com/hewiefreeman/GopherClientJS/wiki/Client-Actions#executing-custom-client-actions)
 3) **SQL Authentication**
    - Set-Up
    - Using Custom Account Info
