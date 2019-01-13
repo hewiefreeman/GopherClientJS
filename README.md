@@ -27,3 +27,11 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
    - Changing Custom Account Info
    - Auto-Login (Remember Me)
    - Friending
+
+# Contributions
+Contributions are open and welcomed! Help is needed for everything from documentation, cleaning up code, performance enhancements, client APIs and more. Don't forget to show your support by starring or following the project!
+
+Please read the following articles before submitting any contributions or filing an Issue:
+
+ - [Contribution Guidlines](https://github.com/hewiefreeman/GopherGameServer/blob/master/CONTRIBUTING.md)
+ - [Code of Conduct](https://github.com/hewiefreeman/GopherGameServer/blob/master/CODE_OF_CONDUCT.md)
