@@ -6,8 +6,6 @@ This is the JavaScript Client API for the [Gopher Game Server](https://github.co
 
 # Usage
 
- **[UNDER CONSTRUCTION]**
-
 ## Table of Contents
 
 1) [**Getting Started**](https://github.com/hewiefreeman/GopherClientJS/wiki/Getting-Started)
