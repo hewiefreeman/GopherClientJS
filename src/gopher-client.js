@@ -75,6 +75,12 @@ function GopherServerClient() {
 				"Notice",
 				"Important"
 	];
+	this.userStatuses = {
+		available: 0,
+		inGame: 1,
+		idle: 2,
+		offline: 3
+	};
 	this.userStatusDefs = [
 				"Available",
 				"In Game",
@@ -835,7 +841,7 @@ GopherServerClient.prototype.leaveRoom = function(){
 GopherServerClient.prototype.leaveRoomResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onLeaveRoomListener != null){
-			this.onLeaveRoomListener(false, data.e);
+			this.onLeaveRoomListener("", data.e);
 		}
 	}else{
 		var tempRoom = this.roomName;
@@ -884,11 +890,11 @@ GopherServerClient.prototype.deleteRoom = function(roomName){
 GopherServerClient.prototype.deleteRoomResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onDeleteRoomListener != null){
-			this.onDeleteRoomListener(false, data.e);
+			this.onDeleteRoomListener("", data.e);
 		}
 	}else{
 		if(this.onDeleteRoomListener != null){
-			this.onDeleteRoomListener(true, null);
+			this.onDeleteRoomListener(data.r, null);
 		}
 	}
 }
@@ -975,7 +981,7 @@ GopherServerClient.prototype.customClientAction = function(action, data){
 GopherServerClient.prototype.customClientActionResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onCustomActionListener != null){
-			this.onCustomActionListener(null, null, data.e); // responseData, actionType, error
+			this.onCustomActionListener(null, data.a, data.e); // responseData, actionType, error
 		}
 	}else{
 		if(this.onCustomActionListener != null){
@@ -1002,7 +1008,7 @@ GopherServerClient.prototype.requestFriend = function(friendName){
 GopherServerClient.prototype.requestFriendRecieved = function(data){
 	if(data.e !== undefined){
 		if(this.onRequestFriendListener != null){
-			this.onRequestFriendListener(null, data.e); // friendName, error
+			this.onRequestFriendListener("", data.e); // friendName, error
 		}
 	}else{
 		//ADD FRIEND
@@ -1030,7 +1036,7 @@ GopherServerClient.prototype.acceptFriend = function(friendName){
 GopherServerClient.prototype.acceptFriendRecieved = function(data){
 	if(data.e !== undefined){
 		if(this.onAcceptFriendListener != null){
-			this.onAcceptFriendListener(null, data.e); // friendName, error
+			this.onAcceptFriendListener("", data.e); // friendName, error
 		}
 	}else{
 		//UPDATE/ADD FRIEND
@@ -1063,16 +1069,16 @@ GopherServerClient.prototype.declineFriend = function(friendName){
 GopherServerClient.prototype.declineFriendRecieved = function(data){
 	if(data.e !== undefined){
 		if(this.onDeclineFriendListener != null){
-			this.onDeclineFriendListener(null, data.e); // friendName, error
+			this.onDeclineFriendListener("", data.e); // friendName, error
 		}
 	}else{
-		//REMOVE FRIEND
-		if(this.friends[data.r] != undefined){
-			delete this.friends[data.r];
-		}
 		//
 		if(this.onDeclineFriendListener != null){
 			this.onDeclineFriendListener(data.r, null); // friendName, error
+		}
+		//REMOVE FRIEND
+		if(this.friends[data.r] != undefined){
+			delete this.friends[data.r];
 		}
 	}
 }
@@ -1091,16 +1097,16 @@ GopherServerClient.prototype.removeFriend = function(friendName){
 GopherServerClient.prototype.removeFriendRecieved = function(data){
 	if(data.e !== undefined){
 		if(this.onRemoveFriendListener != null){
-			this.onRemoveFriendListener(null, data.e); // friendName, error
+			this.onRemoveFriendListener("", data.e); // friendName, error
 		}
 	}else{
-		//REMOVE FRIEND
-		if(this.friends[data.r] != undefined){
-			delete this.friends[data.r];
-		}
 		//
 		if(this.onRemoveFriendListener != null){
 			this.onRemoveFriendListener(data.r, null); // friendName, error
+		}
+		//REMOVE FRIEND
+		if(this.friends[data.r] != undefined){
+			delete this.friends[data.r];
 		}
 	}
 }
@@ -1121,7 +1127,7 @@ GopherServerClient.prototype.changeStatus = function(status){
 GopherServerClient.prototype.changeStatusRecieved = function(data){
 	if(data.e !== undefined){
 		if(this.onStatusChangeListener != null){
-			this.onStatusChangeListener(null, data.e); // status, error
+			this.onStatusChangeListener(0, data.e); // status, error
 		}
 	}else{
 		//CHANGE STATUS
@@ -1143,7 +1149,6 @@ GopherServerClient.prototype.setUserVariable = function(key, value){
 	if(key == undefined || key.constructor != String){
 		return this.paramError;
 	}
-	console.log(key+", "+value);
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.setUserVariable, P: {k:key, v: value}}));
 }
 
@@ -1177,34 +1182,46 @@ GopherServerClient.prototype.getUserVariable = function(key){
 //   OBJECT GETTERS   ////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// isConnected returns a boolean that's true if the client is connected
 GopherServerClient.prototype.isConnected = function(){
 	return this.connected;
 }
 
+// isLoggedIn returns a boolean that's true if the client is logged in as a User
 GopherServerClient.prototype.isLoggedIn = function(){
 	return this.loggedIn;
 }
 
+// isGuest returns a boolean that's true if the client is a guest
 GopherServerClient.prototype.isGuest = function(){
 	return this.guest;
 }
 
+// getUserName returns the name of the User the client is currently logged in as. A blank string is returned
+// if the client is not logged in.
 GopherServerClient.prototype.getUserName = function(){
 	return this.userName;
 }
 
+// getRoom returns the name of the Room the client User is currently in. A blank string is returned
+// if the client User is not in a room.
 GopherServerClient.prototype.getRoom = function(){
 	return this.roomName;
 }
 
+// getFriends returns the client User's friends as an array of strings. An empty array is returned
+// if the client User has no friends.
 GopherServerClient.prototype.getFriends = function(){
 	return this.friends;
 }
 
+// getStatus returns the client User's status.
 GopherServerClient.prototype.getStatus = function(){
 	return this.status;
 }
 
+// statusName converts a status number into the name of the status as a string ("Available", "In Game",
+// "Idle", and "Offline").
 GopherServerClient.prototype.statusName = function(status){
 	if(status == undefined || status == null || status.constructor != Number || status < 0 || status > this.userStatusDefs.length-1){
 		return undefined;
@@ -1212,11 +1229,7 @@ GopherServerClient.prototype.statusName = function(status){
 	return this.userStatusDefs[status];
 }
 
+// voiceSupport returns true if the client's browser supports the voice chat features.
 GopherServerClient.prototype.voiceSupport = function(){
 	return this.browserVoiceSupport;
 }
-
-/*
-"Can you feel that, huh?? Can you feel it Mr.Compost??"
-   -Jim Carrey (Ace Ventura: When Nature Calls)
-*/
