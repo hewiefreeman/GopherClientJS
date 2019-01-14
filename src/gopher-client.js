@@ -3,20 +3,20 @@ var gopherClient = new GopherServerClient();
 function GopherServerClient() {
 	var self = this;
 
-	//INITIAL CHECKS
+	// INITIAL CHECKS
 	this.browserVoiceSupport = false;
 	this.voiceChat = null;
 
-	//CHECK WEBSOCKET SUPPORT
+	// CHECK WEBSOCKET SUPPORT
 	if(!window.WebSocket){ return null; } // WebSocket is required!
 
-	//CHECK MICROPHONE/SOUND SUPPORT
+	// CHECK MICROPHONE/SOUND SUPPORT
 	if(navigator.mediaDevices.getUserMedia){
 		this.browserVoiceSupport = true;
 		this.voiceChat = new GopherVoiceChat();
 	}
 
-	//INIT OBJECTS
+	// INITIALIZE OBJECTS
 	this.ip = "";
 	this.port = 0;
 	this.socketURL = "";
@@ -34,7 +34,7 @@ function GopherServerClient() {
 	this.friends = {};
 	this.userVars = {};
 
-	//DEFINITIONS
+	// GENERAL DEFINITIONS
 	this.clientActionDefs = {
 				signup: "s",
 				deleteAccount: "d",
@@ -93,7 +93,7 @@ function GopherServerClient() {
 				accepted: 2
 	};
 
-	//GOPHER SERVER EVENTS
+	// EVENT DEFINITIONS
 	this.events = {
 				signup: "onsignup",
 				accountDelete: "onaccountdelete",
@@ -129,6 +129,8 @@ function GopherServerClient() {
 				friendRequestAccepted: "onfriendrequestaccepted", // WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
 				friendStatusChanged: "onfriendstatuschanged" // WHEN A FRIEND'S STATUS CHANGES
 	};
+
+	// EVENT LISTENERS
 	this.onSignupListener = null;
 	this.onAccountDeleteListener = null;
 	this.onPasswordChangeListener = null;
