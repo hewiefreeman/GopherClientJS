@@ -2,7 +2,8 @@ package main
 
 import (
 	"github.com/hewiefreeman/GopherGameServer"
-	"github.com/hewiefreeman/GopherGameServer/rooms"
+	"github.com/hewiefreeman/GopherGameServer/core"
+	"github.com/hewiefreeman/GopherGameServer/actions"
 	"fmt"
 )
 
@@ -16,15 +17,18 @@ func main() {
 		HostAlias: "localhost",
 		IP:        "localhost",
 		Port:      8080,
+
+		AdminLogin: "admin",
+		AdminPassword: "admin",
 	}
 
 	// Make a Room type and set broadcasts and callbacks
-	chatRoomType := rooms.NewRoomType("chat", true)
+	chatRoomType := core.NewRoomType("chat", true)
 	chatRoomType.EnableBroadcastUserEnter().EnableBroadcastUserLeave().
 			   SetUserEnterCallback(onEnterChat).SetUserLeaveCallback(onLeaveChat)
 
 	// Open a Room
-	_, roomErr := rooms.New("chatExample", "chat", false, 0, "")
+	_, roomErr := core.NewRoom("chatExample", "chat", false, 0, "")
 	if roomErr != nil {
 		fmt.Println("Error while opening Room:", roomErr)
 		return
@@ -33,15 +37,18 @@ func main() {
 	gopher.Start(&settings)
 }
 
-func onEnterChat(room *rooms.Room, userName string) {
+func onEnterChat(room *core.Room, user *core.RoomUser) {
 	// Example of using parameters to send a welcome message to the entering User
 	message := "Welcome! Please read the chat room rules, and have fun!"
-	messageErr := room.ServerMessage(message, rooms.ServerMessageNotice, []string{userName})
+	messageErr := room.ServerMessage(message, core.ServerMessageNotice, []string{user.User().Name()})
 	if messageErr != nil {
 		fmt.Println("Error while messaging User:", messageErr)
 	}
 }
 
-func onLeaveChat(room *rooms.Room, userName string) {
+func onLeaveChat(room *core.Room, user *core.RoomUser) {
 	// ...
+
+	// To convert RoomUser to User:
+	// u := user.User()
 }

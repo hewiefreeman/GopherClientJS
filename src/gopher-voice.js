@@ -163,9 +163,8 @@ GopherVoiceChat.prototype.cMSrob = function(){
 
 // RECEIVED VOICE CHAT DATA FROM SERVER
 GopherVoiceChat.prototype.rD = function(data){
-	var self = gopherClient.voiceChat;
-	userName = data.u;
-	if(this.mList[userName] != undefined){
+	var self = this;
+	if(this.mList[data.u] != undefined){
 		return;
 	}
 	//PROCESSING Blob audio
@@ -192,7 +191,7 @@ GopherVoiceChat.prototype.rD = function(data){
 					source.start();
 			})
 			.catch(function(e){
-					console.log(e);
+					console.log("[gopherChat.voiceChat] Error decoding voice stream data");
 			});
 		};
 		fileReader.readAsArrayBuffer(blobFromText);

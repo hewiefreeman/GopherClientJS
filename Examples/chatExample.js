@@ -2,7 +2,6 @@ var gc = null;
 window.onload = loaded;
 
 function loaded(e){
-	console.log("loading...")
 	gc = gopherClient;
 
 	//SERVER CONNECTION LISTENERS
