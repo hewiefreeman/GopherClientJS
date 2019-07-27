@@ -13,7 +13,9 @@ function GopherServerClient() {
 	// CHECK MICROPHONE/SOUND SUPPORT
 	if(navigator.mediaDevices.getUserMedia){
 		this.browserVoiceSupport = true;
-		this.voiceChat = new GopherVoiceChat();
+		if(typeof GopherVoiceChat == 'function'){
+			this.voiceChat = new GopherVoiceChat();
+		}
 	}
 
 	// INITIALIZE OBJECTS

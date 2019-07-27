@@ -15,8 +15,8 @@ function loaded(e){
 	gc.addEventListener(gc.events.friendAccepted, onAcceptFriend);// WHEN YOU ACCEPT A REQUEST
 	gc.addEventListener(gc.events.friendDeclined, onDeclineFriend);// WHEN YOU DECLINE A REQUEST
 	gc.addEventListener(gc.events.friendRemoved, onRemoveFriend);// WHEN A FRIEND GETS REMOVED OR WHEN A USER DECLINES YOUR REQUEST
-	gc.addEventListener(gc.events.friendRequestRecieved, onRecieveFriendRequest);// WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
-	gc.addEventListener(gc.events.friendRequestAccepted, onRecieveFriendAccept);// WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
+	gc.addEventListener(gc.events.friendRequestReceived, onReceiveFriendRequest);// WHEN YOU RECIEVE A FRIEND REQUEST FROM ANOTHER USER
+	gc.addEventListener(gc.events.friendRequestAccepted, onReceiveFriendAccept);// WHEN YOUR REQUEST TO ANOTHER USER IS ACCEPTED
 	gc.addEventListener(gc.events.friendStatusChanged, onFriendStatusChange);// WHEN A FRIEND'S STATUS CHANGES
 	gc.addEventListener(gc.events.statusChanged, onStatusChange);
 	//CONNECT
@@ -90,7 +90,8 @@ function disconnected(){
 //////////////////  LOGIN  //////////////////////////////
 function onLogin(userName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error);
 	}else{
 		console.log("Logged in as: "+userName);
 	}
@@ -99,7 +100,8 @@ function onLogin(userName, error){
 //////////////////  LOGOUT  //////////////////////////////
 function onLogout(success, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error);
 	}else{
 		console.log("You have been logged out");
 	}
@@ -108,7 +110,8 @@ function onLogout(success, error){
 //////////////////  REQUESTED FRIEND  //////////////////////////////
 function onRequestFriend(friendName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error)
 	}else{
 		console.log("Sent friend request to: "+friendName);
 	}
@@ -117,7 +120,8 @@ function onRequestFriend(friendName, error){
 //////////////////  ACCEPTED FRIEND  //////////////////////////////
 function onAcceptFriend(friendName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error)
 	}else{
 		console.log("Accepted "+friendName+" as a friend");
 	}
@@ -126,7 +130,8 @@ function onAcceptFriend(friendName, error){
 //////////////////  DECLINED FRIEND  //////////////////////////////
 function onDeclineFriend(friendName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error)
 	}else{
 		console.log("Declined "+friendName+" as a friend");
 	}
@@ -135,7 +140,8 @@ function onDeclineFriend(friendName, error){
 //////////////////  DECLINED FRIEND  //////////////////////////////
 function onRemoveFriend(friendName, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error)
 	}else{
 		console.log(friendName+" was removed from your friends list");
 	}
@@ -144,19 +150,20 @@ function onRemoveFriend(friendName, error){
 //////////////////  STATUS CHANGE  //////////////////////////////
 function onStatusChange(status, error){
 	if(error != null){
-		console.log("Error: "+error);
+		console.log("Error:");
+		console.log(error)
 	}else{
 		console.log("Changed your status to '"+gc.statusName(status)+"'");
 	}
 }
 
 //////////////////  RECEIVED FRIEND REQUEST  //////////////////////////////
-function onRecieveFriendRequest(friendName){
+function onReceiveFriendRequest(friendName){
 	console.log("Recieved friend request from: "+friendName);
 }
 
 //////////////////  RECEIVED FRIEND REQUEST ACCEPT  //////////////////////////////
-function onRecieveFriendAccept(friendName){
+function onReceiveFriendAccept(friendName){
 	console.log(friendName+" accepted your friend request");
 }
 
