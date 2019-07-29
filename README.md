@@ -4,7 +4,7 @@
 
 This is the JavaScript client API for [Gopher Game Server](https://github.com/hewiefreeman/GopherGameServer). It provides all the functionalities to use Gopher Game Server with vanilla, or any JavaScript libraries. Source files can be found in the `src` folder, examples in the `example` folder, and minified source files in the `src/min` folder.
 
-# Usage
+# :books: Usage
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ This is the JavaScript client API for [Gopher Game Server](https://github.com/he
    - [Friending](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#friending)
    - [User Status](https://github.com/hewiefreeman/GopherClientJS/wiki/SQL-Authentication#user-status)
 
-# Contributions
+# :milky_way: Contributions
 Contributions are open and welcomed! Help is needed for everything from documentation, cleaning up code, performance enhancements, client APIs (in any laguage) and more. Don't forget to show your support by starring or following the project!
 
 If you want to make a client API in an unsupported language and want to know where to start and/or have any questions, feel free to [email me](mailto:dominiquedebergue@gmail.com?subject=[GitHub]%20Gopher%20Game%20Server)!
