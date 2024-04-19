@@ -8,14 +8,12 @@ function GopherServerClient() {
 	this.voiceChat = null;
 
 	// CHECK WEBSOCKET SUPPORT
-	if(!window.WebSocket){ return null; } // WebSocket is required!
+	if(typeof window.WebSocket === "undefined"){ return null; } // WebSocket is required!
 
 	// CHECK MICROPHONE/SOUND SUPPORT
-	if(navigator.mediaDevices.getUserMedia){
+	if(typeof navigator.mediaDevices.getUserMedia !== "undefined" && typeof GopherVoiceChat !== "undefined"){
 		this.browserVoiceSupport = true;
-		if(typeof GopherVoiceChat == 'function'){
-			this.voiceChat = new GopherVoiceChat();
-		}
+		this.voiceChat = new GopherVoiceChat();
 	}
 
 	// INITIALIZE OBJECTS
@@ -152,7 +150,7 @@ function GopherServerClient() {
 	this.onDeleteRoomListener = null;
 	this.onInviteListener = null;
 	this.onRevokeListener = null;
-	this.onReveiveInviteListener = null;
+	this.onReceiveInviteListener = null;
 	this.onChatMsgListener = null;
 	this.onPrivateMsgListener = null;
 	this.onServerMsgListener = null;
@@ -163,7 +161,7 @@ function GopherServerClient() {
 	this.onAcceptFriendListener = null;
 	this.onDeclineFriendListener = null;
 	this.onRemoveFriendListener = null;
-	this.onFriendRequestReveivedListener = null;
+	this.onFriendRequestReceivedListener = null;
 	this.onFriendRequestAcceptedListener = null;
 	this.onFriendStatusChangeListener = null;
 
@@ -236,7 +234,7 @@ GopherServerClient.prototype.sD = function(e){
 
 	//CALL THE DISCONNECT LISTENER
 	if(self.onDisconnectListener != null){
-		self.onDisconnectListener();
+		self.onDisconnectListener(e);
 	}
 }
 
@@ -250,214 +248,86 @@ GopherServerClient.prototype.sR = function(e){
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
 GopherServerClient.prototype.addEventListener = function(type, callback){
-	if(type.constructor == null || type.constructor != String || callback == null || callback === undefined || callback.constructor != Function){
-		return this.paramError;
+	if(type.constructor != String || callback.constructor != Function){
+		return this.paramError + " (addEventListener: " + type + ", " + callback + ")";
 	}
-	if(type == this.events.signup){
-		this.onSignupListener = callback;
-
-	}else if(type == this.events.passwordChange){
-		this.onPasswordChangeListener = callback;
-
-	}else if(type == this.events.accountInfoChange){
-		this.onAccountInfoChangeListener = callback;
-
-	}else if(type == this.events.accountDelete){
-		this.onAccountDeleteListener = callback;
-
-	}else if(type == this.events.login){
-		this.onLoginListener = callback;
-
-	}else if(type == this.events.logout){
-		this.onLogoutListener = callback;
-
-	}else if(type == this.events.connected){
-		this.onConnectListener = callback;
-
-	}else if(type == this.events.disconnected){
-		this.onDisconnectListener = callback;
-
-	}else if(type == this.events.joined){
-		this.onJoinRoomListener = callback;
-
-	}else if(type == this.events.left){
-		this.onLeaveRoomListener = callback;
-
-	}else if(type == this.events.userJoined){
-		this.onUserJoinListener = callback;
-
-	}else if(type == this.events.userLeft){
-		this.onUserLeaveListener = callback;
-
-	}else if(type == this.events.roomCreate){
-		this.onCreateRoomListener = callback;
-
-	}else if(type == this.events.roomDelete){
-		this.onDeleteRoomListener = callback;
-
-	}else if(type == this.events.invited){
-		this.onInviteListener = callback;
-
-	}else if(type == this.events.inviteRevoked){
-		this.onRevokeListener = callback;
-
-	}else if(type == this.events.inviteReveived){
-		this.onReveiveInviteListener = callback;
-
-	}else if(type == this.events.chatMessage){
-		this.onChatMsgListener = callback;
-
-	}else if(type == this.events.privateMessage){
-		this.onPrivateMsgListener = callback;
-
-	}else if(type == this.events.serverMessage){
-		this.onServerMsgListener = callback;
-
-	}else if(type == this.events.data){
-		this.onDataListener = callback;
-
-	}else if(type == this.events.statusChanged){
-		this.onStatusChangeListener = callback;
-
-	}else if(type == this.events.customAction){
-		this.onCustomActionListener = callback;
-
-	}else if(type == this.events.friendRequested){
-		this.onRequestFriendListener = callback;
-
-	}else if(type == this.events.friendAccepted){
-		this.onAcceptFriendListener = callback;
-
-	}else if(type == this.events.friendDeclined){
-		this.onDeclineFriendListener = callback;
-
-	}else if(type == this.events.friendRemoved){
-		this.onRemoveFriendListener = callback;
-
-	}else if(type == this.events.friendRequestReveived){
-		this.onFriendRequestReveivedListener = callback;
-
-	}else if(type == this.events.friendRequestAccepted){
-		this.onFriendRequestAcceptedListener = callback;
-
-	}else if(type == this.events.friendStatusChanged){
-		this.onFriendStatusChangeListener = callback;
-
-	}else if(type == this.events.autologInit){
-		this.onAutoLogInitListener = callback;
-
-	}else if(type == this.events.autologFailed){
-		this.onAutoLogFailListener = callback;
-
-	}else if(type == this.events.autologNoFile){
-		this.onAutoLogNoFileListener = callback;
-
+	switch (type) {
+		case this.events.signup: 			this.onSignupListener = callback; break;
+		case this.events.passwordChange: 		this.onPasswordChangeListener = callback; break;
+		case this.events.accountInfoChange: 	this.onAccountInfoChangeListener = callback; break;
+		case this.events.accountDelete: 		this.onAccountDeleteListener = callback; break;
+		case this.events.login: 				this.onLoginListener = callback; break;
+		case this.events.logout: 			this.onLogoutListener = callback; break;
+		case this.events.connected: 			this.onConnectListener = callback; break;
+		case this.events.disconnected: 		this.onDisconnectListener = callback; break;
+		case this.events.joined: 			this.onJoinRoomListener = callback; break;
+		case this.events.left: 				this.onLeaveRoomListener = callback; break;
+		case this.events.userJoined: 			this.onUserJoinListener = callback; break;
+		case this.events.userLeft: 			this.onUserLeaveListener = callback; break;
+		case this.events.roomCreate: 			this.onCreateRoomListener = callback; break;
+		case this.events.roomDelete: 			this.onDeleteRoomListener = callback; break;
+		case this.events.invited: 			this.onInviteListener = callback; break;
+		case this.events.inviteRevoked: 		this.onRevokeListener = callback; break;
+		case this.events.inviteReceived: 		this.onReceiveInviteListener = callback; break;
+		case this.events.chatMessage: 		this.onChatMsgListener = callback; break;
+		case this.events.privateMessage: 		this.onPrivateMsgListener = callback; break;
+		case this.events.serverMessage: 		this.onServerMsgListener = callback; break;
+		case this.events.data: 				this.onDataListener = callback; break;
+		case this.events.statusChanged: 		this.onStatusChangeListener = callback; break;
+		case this.events.customAction: 		this.onCustomActionListener = callback; break;
+		case this.events.friendRequested: 		this.onRequestFriendListener = callback; break;
+		case this.events.friendAccepted: 		this.onAcceptFriendListener = callback; break;
+		case this.events.friendDeclined: 		this.onDeclineFriendListener = callback; break;
+		case this.events.friendRemoved: 		this.onRemoveFriendListener = callback; break;
+		case this.events.friendRequestReceived: this.onFriendRequestReceivedListener = callback; break;
+		case this.events.friendRequestAccepted: this.onFriendRequestAcceptedListener = callback; break;
+		case this.events.friendStatusChanged: 	this.onFriendStatusChangeListener = callback; break;
+		case this.events.autologInit: 		this.onAutoLogInitListener = callback; break;
+		case this.events.autologFailed: 		this.onAutoLogFailListener = callback; break;
+		case this.events.autologNoFile: 		this.onAutoLogNoFileListener = callback; break;
+		default: 							console.log("Unrecognized gopherClient event: '" + type + "'");
 	}
 }
 
 GopherServerClient.prototype.removeEventListener = function(type){
 	if(type.constructor != String){
-		return this.paramError;
+		return this.paramError + " (removeEventListener: " + type + ")";
 	}
-	if(type == this.events.signup){
-		this.onSignupListener = null;
-
-	}else if(type == this.events.passwordChange){
-		this.onPasswordChangeListener = null;
-
-	}else if(type == this.events.accountInfoChange){
-		this.onAccountInfoChangeListener = null;
-
-	}else if(type == this.events.accountDelete){
-		this.onAccountDeleteListener = null;
-
-	}else if(type == this.events.login){
-		this.onLoginListener = null;
-
-	}else if(type == this.events.logout){
-		this.onLogoutListener = null;
-
-	}else if(type == this.events.connected){
-		this.onConnectListener = null;
-
-	}else if(type == this.events.disconnected){
-		this.onDisconnectListener = null;
-
-	}else if(type == this.events.joined){
-		this.onJoinRoomListener = null;
-
-	}else if(type == this.events.left){
-		this.onLeaveRoomListener = null;
-
-	}else if(type == this.events.userJoined){
-		this.onUserJoinListener = null;
-
-	}else if(type == this.events.userLeft){
-		this.onUserLeaveListener = null;
-
-	}else if(type == this.events.roomCreate){
-		this.onCreateRoomListener = null;
-
-	}else if(type == this.events.roomDelete){
-		this.onDeleteRoomListener = null;
-
-	}else if(type == this.events.invited){
-		this.onInviteListener = null;
-
-	}else if(type == this.events.inviteRevoked){
-		this.onRevokeListener = null;
-
-	}else if(type == this.events.inviteReveived){
-		this.onReveiveInviteListener = null;
-
-	}else if(type == this.events.chatMessage){
-		this.onChatMsgListener = null;
-
-	}else if(type == this.events.privateMessage){
-		this.onPrivateMsgListener = null;
-
-	}else if(type == this.events.serverMessage){
-		this.onServerMsgListener = null;
-
-	}else if(type == this.events.data){
-		this.onDataListener = null;
-
-	}else if(type == this.events.statusChanged){
-		this.onStatusChangeListener = null;
-
-	}else if(type == this.events.customAction){
-		this.onCustomActionListener = null;
-
-	}else if(type == this.events.friendRequested){
-		this.onRequestFriendListener = null;
-
-	}else if(type == this.events.friendAccepted){
-		this.onAcceptFriendListener = null;
-
-	}else if(type == this.events.friendDeclined){
-		this.onDeclineFriendListener = null;
-
-	}else if(type == this.events.friendRemoved){
-		this.onRemoveFriendListener = null;
-
-	}else if(type == this.events.friendRequestReveived){
-		this.onFriendRequestReveivedListener = null;
-
-	}else if(type == this.events.friendRequestAccepted){
-		this.onFriendRequestAcceptedListener = null;
-
-	}else if(type == this.events.friendStatusChanged){
-		this.onFriendStatusChangeListener = null;
-
-	}else if(type == this.events.autologInit){
-		this.onAutoLogInitListener = null;
-
-	}else if(type == this.events.autologFailed){
-		this.onAutoLogFailListener = null;
-
-	}else if(type == this.events.autologNoFile){
-		this.onAutoLogNoFileListener = null;
-
+	switch (type) {
+		case this.events.signup: 			this.onSignupListener = null; break;
+		case this.events.passwordChange: 		this.onPasswordChangeListener = null; break;
+		case this.events.accountInfoChange: 	this.onAccountInfoChangeListener = null; break;
+		case this.events.accountDelete: 		this.onAccountDeleteListener = null; break;
+		case this.events.login: 				this.onLoginListener = null; break;
+		case this.events.logout: 			this.onLogoutListener = null; break;
+		case this.events.connected: 			this.onConnectListener = null; break;
+		case this.events.disconnected: 		this.onDisconnectListener = null; break;
+		case this.events.joined: 			this.onJoinRoomListener = null; break;
+		case this.events.left: 				this.onLeaveRoomListener = null; break;
+		case this.events.userJoined: 			this.onUserJoinListener = null; break;
+		case this.events.userLeft: 			this.onUserLeaveListener = null; break;
+		case this.events.roomCreate: 			this.onCreateRoomListener = null; break;
+		case this.events.roomDelete: 			this.onDeleteRoomListener = null; break;
+		case this.events.invited: 			this.onInviteListener = null; break;
+		case this.events.inviteRevoked: 		this.onRevokeListener = null; break;
+		case this.events.inviteReceived: 		this.onReceiveInviteListener = null; break;
+		case this.events.chatMessage: 		this.onChatMsgListener = null; break;
+		case this.events.privateMessage: 		this.onPrivateMsgListener = null; break;
+		case this.events.serverMessage: 		this.onServerMsgListener = null; break;
+		case this.events.data: 				this.onDataListener = null; break;
+		case this.events.statusChanged: 		this.onStatusChangeListener = null; break;
+		case this.events.customAction: 		this.onCustomActionListener = null; break;
+		case this.events.friendRequested: 		this.onRequestFriendListener = null; break;
+		case this.events.friendAccepted: 		this.onAcceptFriendListener = null; break;
+		case this.events.friendDeclined: 		this.onDeclineFriendListener = null; break;
+		case this.events.friendRemoved: 		this.onRemoveFriendListener = null; break;
+		case this.events.friendRequestReceived: this.onFriendRequestReceivedListener = null; break;
+		case this.events.friendRequestAccepted: this.onFriendRequestAcceptedListener = null; break;
+		case this.events.friendStatusChanged: 	this.onFriendStatusChangeListener = null; break;
+		case this.events.autologInit: 		this.onAutoLogInitListener = null; break;
+		case this.events.autologFailed: 		this.onAutoLogFailListener = null; break;
+		case this.events.autologNoFile: 		this.onAutoLogNoFileListener = null; break;
+		default: 							console.log("Unrecognized gopherClient event: '" + type + "'");
 	}
 }
 
@@ -482,44 +352,27 @@ GopherServerClient.prototype.sRhandle = function(data){
 		this.customClientActionResponse(data.a);
 	}else if(data.c !== undefined){
 		//BUILT-IN CLIENT ACTION RESPONSES
-		if(data.c.a == this.clientActionDefs.setUserVariable){
-			this.setUserVariableReceived(data.c);
-		}else if(data.c.a == this.clientActionDefs.setUserVariables){
-			this.setUserVariablesReceived(data.c);
-		}else if(data.c.a == this.clientActionDefs.signup){
-			this.signupResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.deleteAccount){
-			this.deleteAccountResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.changeAccountInfo){
-			this.changeAccountInfoResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.changePassword){
-			this.changePasswordResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.login){
-			this.loginReponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.logout){
-			this.logoutReponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.joinRoom){
-			this.joinRoomResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.leaveRoom){
-			this.leaveRoomResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.createRoom){
-			this.createRoomResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.roomInvite){
-			this.sendInviteResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.revokeInvite){
-			this.revokeInviteResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.deleteRoom){
-			this.deleteRoomResponse(data.c);
-		}else if(data.c.a == this.clientActionDefs.requestFriend){
-			this.requestFriendReveived(data.c);
-		}else if(data.c.a == this.clientActionDefs.acceptFriend){
-			this.acceptFriendReveived(data.c);
-		}else if(data.c.a == this.clientActionDefs.declineFriend){
-			this.declineFriendReveived(data.c);
-		}else if(data.c.a == this.clientActionDefs.removeFriend){
-			this.removeFriendReveived(data.c);
-		}else if(data.c.a == this.clientActionDefs.changeStatus){
-			this.changeStatusReveived(data.c);
+		switch (data.c.a) {
+			case this.clientActionDefs.setUserVariable: 		this.setUserVariableResponse(data.c); break;
+			case this.clientActionDefs.setUserVariables: 	this.setUserVariablesResponse(data.c); break;
+			case this.clientActionDefs.signup: 			this.signupResponse(data.c); break;
+			case this.clientActionDefs.deleteAccount: 		this.deleteAccountResponse(data.c); break;
+			case this.clientActionDefs.changeAccountInfo: 	this.changeAccountInfoResponse(data.c); break;
+			case this.clientActionDefs.changePassword: 		this.changePasswordResponse(data.c); break;
+			case this.clientActionDefs.login: 				this.loginReponse(data.c); break;
+			case this.clientActionDefs.logout: 			this.logoutReponse(data.c); break;
+			case this.clientActionDefs.joinRoom: 			this.joinRoomResponse(data.c); break;
+			case this.clientActionDefs.leaveRoom: 			this.leaveRoomResponse(data.c); break;
+			case this.clientActionDefs.createRoom: 			this.createRoomResponse(data.c); break;
+			case this.clientActionDefs.roomInvite: 			this.sendInviteResponse(data.c); break;
+			case this.clientActionDefs.revokeInvite: 		this.revokeInviteResponse(data.c); break;
+			case this.clientActionDefs.deleteRoom: 			this.deleteRoomResponse(data.c); break;
+			case this.clientActionDefs.requestFriend: 		this.requestFriendResponse(data.c); break;
+			case this.clientActionDefs.acceptFriend: 		this.acceptFriendResponse(data.c); break;
+			case this.clientActionDefs.declineFriend: 		this.declineFriendResponse(data.c); break;
+			case this.clientActionDefs.removeFriend: 		this.removeFriendResponse(data.c); break;
+			case this.clientActionDefs.changeStatus: 		this.changeStatusResponse(data.c); break;
+			default: 									console.log("Unrecognized client action response '" + data.c.a + "': " + data.c);
 		}
 	}else if(data.e !== undefined){
 		//USER ENTERED ROOM
@@ -551,14 +404,14 @@ GopherServerClient.prototype.sRhandle = function(data){
 		}
 	}else if(data.i !== undefined){
 		//RECEIVED INVITATION TO ROOM
-		if(this.onReveiveInviteListener != null){
-			this.onReveiveInviteListener(data.i.u, data.i.r); // userName, roomName
+		if(this.onReceiveInviteListener != null){
+			this.onReceiveInviteListener(data.i.u, data.i.r); // userName, roomName
 		}
 	}else if(data.f !== undefined){
 		//RECEIVED FRIEND REQUEST
 		this.friends[data.f.n] = {name: data.f.n, requestStatus: this.friendStatusDefs.requested, status: -1};
-		if(this.onFriendRequestReveivedListener != null){
-			this.onFriendRequestReveivedListener(data.f.n); // userName
+		if(this.onFriendRequestReceivedListener != null){
+			this.onFriendRequestReceivedListener(data.f.n); // userName
 		}
 	}else if(data.fa !== undefined){
 		//FRIEND REQUEST WAS ACCEPTED
@@ -1009,7 +862,7 @@ GopherServerClient.prototype.requestFriend = function(friendName){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.requestFriend, P: friendName}));
 }
 
-GopherServerClient.prototype.requestFriendReveived = function(data){
+GopherServerClient.prototype.requestFriendResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onRequestFriendListener != null){
 			this.onRequestFriendListener("", data.e); // friendName, error
@@ -1037,7 +890,7 @@ GopherServerClient.prototype.acceptFriend = function(friendName){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.acceptFriend, P: friendName}));
 }
 
-GopherServerClient.prototype.acceptFriendReveived = function(data){
+GopherServerClient.prototype.acceptFriendResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onAcceptFriendListener != null){
 			this.onAcceptFriendListener("", data.e); // friendName, error
@@ -1070,7 +923,7 @@ GopherServerClient.prototype.declineFriend = function(friendName){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.declineFriend, P: friendName}));
 }
 
-GopherServerClient.prototype.declineFriendReveived = function(data){
+GopherServerClient.prototype.declineFriendResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onDeclineFriendListener != null){
 			this.onDeclineFriendListener("", data.e); // friendName, error
@@ -1098,7 +951,7 @@ GopherServerClient.prototype.removeFriend = function(friendName){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.removeFriend, P: friendName}));
 }
 
-GopherServerClient.prototype.removeFriendReveived = function(data){
+GopherServerClient.prototype.removeFriendResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onRemoveFriendListener != null){
 			this.onRemoveFriendListener("", data.e); // friendName, error
@@ -1128,7 +981,7 @@ GopherServerClient.prototype.changeStatus = function(status){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.changeStatus, P: Math.round(status)}));
 }
 
-GopherServerClient.prototype.changeStatusReveived = function(data){
+GopherServerClient.prototype.changeStatusResponse = function(data){
 	if(data.e !== undefined){
 		if(this.onStatusChangeListener != null){
 			this.onStatusChangeListener(0, data.e); // status, error
@@ -1156,7 +1009,7 @@ GopherServerClient.prototype.setUserVariable = function(key, value){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.setUserVariable, P: {k:key, v: value}}));
 }
 
-GopherServerClient.prototype.setUserVariableReceived = function(data){
+GopherServerClient.prototype.setUserVariableResponse = function(data){
 	this.userVars[data.r.k] = data.r.v;
 }
 
@@ -1169,7 +1022,7 @@ GopherServerClient.prototype.setUserVariables = function(values){
 	this.socket.send(JSON.stringify({A: this.clientActionDefs.setUserVariables, P: values}));
 }
 
-GopherServerClient.prototype.setUserVariablesReceived = function(data){
+GopherServerClient.prototype.setUserVariablesResponse = function(data){
 	var keys = Object.keys(data.r);
 	for(var i = 0; i < keys.length; i++){
 		this.userVars[keys[i]] = data.r[keys[i]];
